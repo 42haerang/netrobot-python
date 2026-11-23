@@ -1,0 +1,32 @@
+# Local credentials / device-specific configuration
+settings.json
+phone/config.json
+**/connection.json
+.env
+.env.*
+# Generated assets are distributed separately in Releases
+*.onnx
+*.pt
+*.otf
+data/raw/
+data/qa/
+data/search_cache/
+data/dataset/
+models/runs/
+models/.yolo/
+# Python / Android / editors
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.gradle/
+local.properties
+build/
+*.apk
+*.aab
+*.keystore
+*.jks
+*.log
+.DS_Store
+.vscode/
+.idea/

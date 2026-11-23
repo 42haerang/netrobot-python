@@ -1,0 +1,42 @@
+{
+  "camera": 0,
+  "port": 8765,
+  "control_token": "GENERATED_BY_SETUP_LOCAL",
+  "pairing_code": "GENERATED_BY_SETUP_LOCAL",
+  "controller": {
+    "simulate": true,
+    "driver_verified": false,
+    "port": "COM3",
+    "max_speed": 0.5,
+    "motors": [
+      {
+        "wheel": "left_front",
+        "in1": 2,
+        "in2": 3,
+        "pwm": 5,
+        "invert": false
+      },
+      {
+        "wheel": "left_rear",
+        "in1": 4,
+        "in2": 7,
+        "pwm": 6,
+        "invert": false
+      },
+      {
+        "wheel": "right_front",
+        "in1": 8,
+        "in2": 11,
+        "pwm": 9,
+        "invert": false
+      },
+      {
+        "wheel": "right_rear",
+        "in1": 12,
+        "in2": 13,
+        "pwm": 10,
+        "invert": false
+      }
+    ]
+  }
+}
