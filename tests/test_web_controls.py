@@ -43,6 +43,8 @@ class WebControls(unittest.TestCase):
             for url in ('/','/app.js'):
                 with client.get(url) as response:
                     self.assertEqual(response.status_code,200)
+            with client.get('/vendor/ort.wasm.min.mjs') as response:
+                self.assertEqual(response.mimetype,'text/javascript')
             self.assertEqual(client.post('/pair',json={'code':'000000'}).status_code,401)
             self.assertEqual(client.post('/pair',json={'code':'123456'},headers={'Origin':'https://untrusted.invalid'}).status_code,403)
             paired=client.post('/pair',json={'code':'123456'}).json

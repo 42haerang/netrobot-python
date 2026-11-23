@@ -74,6 +74,7 @@ def create_app(settings,camera=None,motors=None):
     web=ROOT/'web'
     allowed_origins=set(settings.get('web_origins',[
         'https://netrobot-control-42h.lush-quail-0027.chatgpt.site',
+        'https://42haerang.github.io',
         'http://127.0.0.1:5173','http://localhost:5173']))
     pair_attempts={}
     session={'id':None,'sequence':-1}
@@ -126,7 +127,9 @@ def create_app(settings,camera=None,motors=None):
 
     @app.get('/<path:filename>')
     def web_asset(filename):
-        return send_from_directory(web,filename)
+        # Windows MIME registry can label .mjs as text/plain; browsers reject it.
+        types={'.js':'text/javascript','.mjs':'text/javascript','.wasm':'application/wasm'}
+        return send_from_directory(web,filename,mimetype=types.get(Path(filename).suffix))
 
     @app.post('/pair')
     def pair():
