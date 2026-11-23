@@ -9,4 +9,6 @@
 - Flask, OpenCV, NumPy, Kivy, Pillow, Requests, Transformers는 각 배포 패키지의 라이선스를 따릅니다.
 - 사진은 Openverse/Flickr 및 Wikimedia Commons에서 수집했습니다. 사진별 권리 정보는 `data/CANDIDATE_SOURCES.csv`와 `data/candidates.json`을 확인하세요. BY-SA 사진은 해당 조건을 유지해야 합니다.
 
-이 저장소는 개발 중인 개인 저장소입니다. 전체 배포물에 하나의 라이선스가 일괄 적용된다고 가정하지 마세요.
+이 저장소는 개발 중인 공개 저장소입니다. 전체 배포물에 하나의 라이선스가 일괄 적용된다고 가정하지 마세요.
+
+웹 화면에는 ONNX Runtime Web 1.20.1의 WASM 런타임을 포함합니다. MIT 라이선스는 `web/vendor/LICENSE.txt`입니다. https://onnxruntime.ai/docs/tutorials/web/

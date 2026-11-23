@@ -1,0 +1,3 @@
+export function joystickVector(dx,dy,radius,deadzone=.12){const magnitude=Math.hypot(dx,dy);if(!radius||magnitude/radius<deadzone)return {x:0,y:0};const length=Math.min(1,magnitude/radius);return {x:dx/magnitude*length,y:-dy/magnitude*length}}
+export function differential(x,y,speed=.5){if(![x,y,speed].every(Number.isFinite)||Math.abs(x)>1||Math.abs(y)>1||speed<0||speed>1)throw new Error('Invalid drive vector');let left=y+x,right=y-x;const largest=Math.max(1,Math.abs(left),Math.abs(right));return [left/largest*speed,left/largest*speed,right/largest*speed,right/largest*speed]}
+export function directionLabel({x,y}){if(Math.hypot(x,y)<.01)return '정지';if(Math.abs(y)>=Math.abs(x))return y>0?'전진':'후진';return x>0?'우회전':'좌회전'}

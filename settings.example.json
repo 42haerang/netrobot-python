@@ -10,33 +10,37 @@
     "max_speed": 0.5,
     "motors": [
       {
-        "wheel": "left_front",
         "in1": 2,
-        "in2": 3,
+        "in2": 4,
         "pwm": 5,
         "invert": false
       },
       {
-        "wheel": "left_rear",
-        "in1": 4,
-        "in2": 7,
+        "in1": 7,
+        "in2": 8,
         "pwm": 6,
         "invert": false
       },
       {
-        "wheel": "right_front",
-        "in1": 8,
-        "in2": 11,
+        "in1": 12,
+        "in2": 13,
         "pwm": 9,
         "invert": false
       },
       {
-        "wheel": "right_rear",
-        "in1": 12,
-        "in2": 13,
+        "in1": 14,
+        "in2": 15,
         "pwm": 10,
         "invert": false
       }
-    ]
+    ],
+    "gripper": {
+      "in1": 16,
+      "in2": 17,
+      "pwm": 11,
+      "invert": false
+    },
+    "gripper_speed": 0.35,
+    "gripper_max_seconds": 2
   }
 }
