@@ -1,0 +1,9 @@
+{
+  "active_source_type": "publisher_labeled_datasets",
+  "direct_camera_photos_required": false,
+  "legacy_search_candidates_allowed_for_training": false,
+  "legacy_grounding_dino_suggestions_allowed_as_ground_truth": false,
+  "reason": "User identified unrelated/non-net photos in the search collection. Replace with source annotations and visual checks.",
+  "required_net_category": "fishing_net",
+  "preferred_sources": ["BePLi v2", "Littora Beach Waste", "Marine Litter Species", "Marine Debris Detection"]
+}

@@ -50,6 +50,7 @@ class WebControls(unittest.TestCase):
             paired=client.post('/pair',json={'code':'123456'}).json
             headers={'X-Control-Token':paired['token']}
             command={'session':paired['session'],'sequence':1,'x':0,'y':1,'speed':.3,'gripper':'close'}
+            camera.timestamp=time.monotonic()
             response=client.post('/drive',json=command,headers=headers)
             self.assertEqual(response.status_code,200)
             self.assertEqual(response.json['motors'],[.3]*4)

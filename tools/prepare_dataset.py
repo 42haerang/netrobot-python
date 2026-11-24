@@ -10,6 +10,9 @@ TARGETS={'net':500,'lookalike':300,'other':200}
 
 
 def prepare():
+    policy=ROOT/'data/SOURCE_POLICY.json'
+    if policy.exists() and not json.loads(policy.read_text(encoding='utf-8')).get('legacy_search_candidates_allowed_for_training',False):
+        raise RuntimeError('Search candidates are deprecated. Use publisher-labeled datasets in data/labeled_sources instead.')
     rows=json.loads((ROOT/'data/candidates.json').read_text(encoding='utf-8'))
     decisions=json.loads((ROOT/'data/review.json').read_text(encoding='utf-8'))
     random.Random(2027).shuffle(rows)

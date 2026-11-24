@@ -30,3 +30,7 @@ build/
 .DS_Store
 .vscode/
 .idea/
+
+# Publisher datasets and download archives (kept locally)
+data/labeled_sources/
+*.part

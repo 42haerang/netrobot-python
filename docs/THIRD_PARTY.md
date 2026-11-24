@@ -12,3 +12,5 @@
 이 저장소는 개발 중인 공개 저장소입니다. 전체 배포물에 하나의 라이선스가 일괄 적용된다고 가정하지 마세요.
 
 웹 화면에는 ONNX Runtime Web 1.20.1의 WASM 런타임을 포함합니다. MIT 라이선스는 `web/vendor/LICENSE.txt`입니다. https://onnxruntime.ai/docs/tutorials/web/
+
+APK: Chaquopy 17.2.0 (MIT)와 Python 3.13 런타임(PSF)을 사용합니다. FLOW 프로토콜은 공개 패킷 형식 자료를 참조해 Python으로 구현했습니다. OpenIPC 소스 코드는 포함하지 않았습니다.

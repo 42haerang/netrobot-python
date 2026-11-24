@@ -1,67 +1,59 @@
-# NETROBOT · 카메라 조종 웹사이트
+# NETROBOT Drone · 인터넷 없이 쓰는 Android APK
 
-**사이트 열기: https://42haerang.github.io/netrobot-python/**
+**[Android APK 다운로드](https://github.com/42haerang/netrobot-python/releases/download/android-v0.1.0/NetRobot-Drone-v0.1.0.apk)** · [웹 조종 연습 화면](https://42haerang.github.io/netrobot-python/)
 
-카메라 영상 위에서 왼쪽 터치 조이스틱과 오른쪽 집게 열기·닫기 버튼을 사용하는 웹 조종 화면입니다. 지금은 실물 로봇이 없으므로 **중앙 로봇 모형으로 모터 동작을 연습**할 수 있습니다.
+드론 Wi-Fi `FLOW_27AF9C`와 **WiFi UAV** 앱을 쓰는 FLOW 계열 카메라를 대상으로 한 첫 테스트 APK입니다. Python(Chaquopy)으로 UDP 영상을 직접 받고, 앱에 포함된 웹 화면을 오프라인으로 표시합니다. 노트북 서버 주소·연결 코드를 입력할 필요가 없습니다.
 
-## 화면과 조작
+## 사용
 
-- 화면 중앙: 전후좌우를 표시한 로봇, 바퀴 모터 M1~M4, 모터별 기어, 집게 모터 M5, 집게 한 쌍.
-- 왼쪽: 터치 조이스틱. 전후진·좌우 회전에 따라 각 모터가 정방향(초록) 또는 역방향(주황)으로 회전합니다. 손을 떼거나 창을 벗어나면 정지합니다. 키보드 WASD/방향키도 지원합니다.
-- 오른쪽: 집게 열기·닫기. 모의 모드에서는 터치하면 양쪽 집게가 끝까지 움직이며 M5와 기어에 색이 들어옵니다. 실물 연결 모드에서는 누르는 동안만 명령을 보냅니다.
-- 집게 버튼 옆: **로봇 모형 끄기 / 켜기**. 영상과 조작 버튼은 남고 중앙 그림만 숨깁니다. 로봇 전원을 끄는 기능이 아닙니다.
-- 상단: 카메라·연결 설정, 전체 화면, 긴급 정지. 긴급 정지 후에는 조종 재개를 눌러야 합니다.
+1. 인터넷이 되는 상태에서 APK를 휴대폰에 내려받아 설치합니다. 64비트 Android 7.0 이상이 대상입니다.
+2. 기존 **WiFi UAV 앱을 종료**합니다. 드론이 한 클라이언트에만 영상을 줄 수 있습니다.
+3. 휴대폰 Wi-Fi를 `FLOW_27AF9C`에 연결합니다. 인터넷이 없어도 해당 Wi-Fi 연결을 유지합니다.
+4. **NetRobot Drone** 앱을 엽니다. 기본 주소 `192.168.169.1`에서 UDP 8800/8801을 확인합니다. 주소가 다른 기종은 설정에서 변경합니다.
+5. 영상은 오는데 색이 이상하면 설정의 **영상 색상 방식**을 바꿔 봅니다.
 
-## 카메라
+화면·영상 수신·모의 조종·기어/집게 애니메이션·ONNX 추론 엔진은 APK 안에 들어 있습니다. 웹사이트 자체는 UDP를 직접 받을 수 없으므로 **실제 드론 영상은 APK에서** 연결합니다. 웹사이트는 조종 연습과 APK 다운로드용입니다.
 
-공개 사이트의 상단 카메라 버튼 → **이 기기 카메라**를 누르면 현재 노트북/휴대폰의 카메라를 사용할 수 있습니다. 브라우저의 카메라 권한이 필요합니다.
+**현재 한계:** APK 빌드·서명과 JPEG 조각 복원 소프트웨어 검사를 완료했습니다. 실제 휴대폰과 해당 드론에서의 수신은 아직 검증하지 못했습니다. 조종은 실물 로봇이 없어 모의 동작입니다. 드론에는 영상 요청과 영상 조각 ACK만 보내며, 비행/프로펠러 제어 명령은 보내지 않습니다.
 
-**노트북 캠을 휴대폰으로 전송**하려면 아래 Python 서버를 노트북에서 실행하고, 같은 Wi-Fi의 휴대폰으로 서버가 표시하는 `휴대폰 웹 화면` 주소를 여세요. 그 주소에는 공개 사이트와 같은 조종 화면이 있습니다.
+**그물 모델은 아직 미포함입니다.** 기존 검색 후보와 자동 박스 제안은 품질 문제로 학습에서 제외했습니다. 공식 라벨 데이터 다운로드·검수가 끝난 뒤 학습해야 합니다. 일반 COCO 모델이나 가짜 테스트 모델을 그물 모델로 바꿔 넣지 않습니다. 학습한 1종류 `net` ONNX를 설정에서 선택하면 기기에 저장하여 다음 실행에도 오프라인으로 불러옵니다. 추론은 휴대폰에서 실행됩니다.
+
+## 개발
+
+- `android/app/src/main/python/drone_android.py`: Python Android Activity, 앱 내부 자원 제공, Wi-Fi 네트워크 연결.
+- `android/app/src/main/python/flow_video.py`: FLOW UDP 조각 복원과 영상 ACK. 비행 제어는 없음.
+- `web/`: 카메라 화면, 조이스틱, 모터 5개·기어·집게 모형, 표시 끄기, 브라우저 ONNX 추론.
+- `tools/prepare_android.py`: 런타임 파일을 APK에 넣음. 실제 그물 모델만 포함하도록 검사함.
+- `pc/`, `phone/`: 이전 노트북/Android 실험 소스. 현재 APK는 노트북 서버를 사용하지 않음.
+
+빌드는 Python 3.13, JDK 21, Android SDK 36을 기준으로 했습니다. Android Studio의 SDK 경로를 `android/local.properties` 또는 `ANDROID_HOME`으로 지정하세요. 소스에는 직접 작성한 Java/Kotlin 코드는 없으며 Java 연결 코드는 Chaquopy가 생성합니다. 화면은 HTML/CSS/JavaScript입니다.
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements-pc.txt
-.venv\Scripts\python tools/setup_local.py
-.venv\Scripts\python pc/server.py
+python tools/prepare_android.py
+cd android
+.\gradlew.bat assembleDebug
 ```
 
-Python 3.13 기준입니다. `setup_local.py`는 로컬 전용 연결 토큰과 6자리 코드를 만들며 기존 설정은 덮어쓰지 않습니다. 기본값은 모의 조종입니다. `settings.json`, `phone/config.json`은 Git에서 제외합니다. 서버가 출력한 `http://노트북IP:8765/#pair=...`를 사용하면 노트북 캠과 연결됩니다. 이 연결 주소와 코드는 공개 저장소에 올리지 마세요.
-
-공개 HTTPS 사이트에서 HTTP 노트북 서버를 직접 호출하면 브라우저가 차단합니다. 같은 Wi-Fi에서는 **노트북 서버의 웹 주소로 화면을 여는 방식**을 사용하세요. 공개 사이트에 영상이나 로컬 연결 토큰을 올리지 않습니다. 외부 연결은 별도 HTTPS 서버 주소를 설정해야 합니다. 브라우저 카메라의 보안 문맥 설명: https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
-
-## 그물 감지 상태
-
-YOLOv8 ONNX 추론과 사각형·신뢰도 표시는 **현재 화면을 연 브라우저 기기에서 실행**하도록 구현했습니다. 설정에서 그물 한 종류를 학습한 ONNX 파일을 선택할 수 있습니다. 320×320 입력, `[1,5,N]` 출력, NMS 미포함 모델을 사용하세요. Python 서버에 `trained_on_net: true`인 모델이 있으면 연결 시 자동으로 불러옵니다.
-
-**그물 전용 모델 학습은 아직 끝나지 않았습니다.** 저장된 일반 COCO 데모 모델은 그물 모델로 자동 사용하지 않습니다. 실제 감지 준비 전에는 화면에 `그물 학습 모델을 연결하세요`라고 표시합니다. 조종 연습의 그물 사각형은 명확히 표시된 가상 예시이며 실제 감지가 아닙니다.
-
-수집 사진은 후보 1,710장(그물 검색 1,085 / 비슷한 물체 366 / 기타 259)입니다. 검수·중복 제거·박스 라벨링 후 500/300/200장을 확정하여 학습 800 / 테스트 200으로 나눌 예정입니다. [데이터 설명](docs/DATASET.md), [Release 자료](https://github.com/42haerang/netrobot-python/releases/tag/prototype-20261124)를 확인하세요. 기존 Release는 첫 보관본이며 최신 코드는 main 브랜치에 있습니다.
-
-## 파일
-
-| 경로 | 내용 |
-|---|---|
-| `web/` | 배포되는 HTML/CSS/JavaScript 화면, 모터 애니메이션, 브라우저 YOLO |
-| `pc/server.py` | Python 카메라 전송·연결 코드·조종 API |
-| `pc/motors.py` | 바퀴 4개 + DC 집게 1개 모의 조종/StandardFirmata 연동 |
-| `tools/` | 수집·라벨 제안·검수 데이터 분할·학습·ONNX 변환 |
-| `data/` | 출처·라이선스·수집 후보·자동 박스 제안 메타데이터 |
-| `phone/` | 이전 Android/Kivy 실험 소스. 현재 웹사이트와 별개이며 APK는 미완성 |
-| `tests/` | 실제 모터에 전력을 보내지 않는 소프트웨어 검사 |
-
-브라우저 화면에는 HTML/CSS/JavaScript를 사용하며, 노트북 카메라·모터 서버와 학습 코드는 Python입니다. Android 설치형 앱 빌드는 현재 진행하지 않습니다. 외부 구성요소 라이선스는 [여기](docs/THIRD_PARTY.md)에 있습니다.
-
-## 하드웨어 연결 전
-
-Arduino Uno/클래식 Nano + StandardFirmata를 대상으로 한 예시 핀 설정은 `settings.example.json`에 있습니다. 바퀴 4개와 DC 집게 1개에 H-브리지 5채널이 필요합니다. 드라이버와 모터 전류 사양이 아직 미정이므로 **실제 배선·구동은 검증하지 않았습니다.**
-
-명령이 0.35초 끊기면 바퀴와 집게가 정지하고, 집게는 연속 2초 제한 후 정지합니다. 영상이 끊기면 조종 명령을 정지로 바꿉니다. 오래된 요청이 새 정지 명령을 덮지 않도록 연결 세션과 명령 순서를 검사합니다. 이 워치독은 Python 프로세스가 살아 있을 때만 동작하므로 PC 전원 상실까지 대응하는 하드웨어/펌웨어 대책이 별도로 필요합니다.
-
-## 검사
+생성 파일: `android/app/build/outputs/apk/debug/app-debug.apk`. 디버그 키는 저장소에 올리지 않습니다.
 
 ```powershell
-.venv\Scripts\python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 node --test tests/web.test.mjs
 ```
 
-모터 방향·입력 검증·집게 제한·통신 인증·오래된 명령 무시·영상 단절·YOLO 박스 변환/NMS를 검사합니다. ONNX 파일이 없으면 Python 데모 추론 검사는 건너뜁니다. 실제 모터, Android APK, 학습 성능을 검증한 결과가 아닙니다.
+소프트웨어 검사에는 프레임 순서 뒤바뀜·중복 UDP 조각·JPEG 복원 결과·잘못된 길이·주소 및 모터 조종 검사가 포함됩니다. 실제 드론/로봇 실험을 대신하는 검사는 아닙니다.
+
+## 데이터
+
+직접 촬영분 없이 공개 라벨 데이터셋으로 구성합니다. 기존 `data/raw/`, `candidates.json`, `box_suggestions.json`은 그물이 아닌 사진이 섞인 검색 후보이므로 학습에 쓰지 않습니다. `data/DATA_POLICY.json`을 확인하세요.
+
+BePLi v2 공식 배포본: https://doi.org/10.17882/96963 (CC BY-NC-SA 4.0). 원본은 약 9.5GB이며 바탕화면 프로젝트의 `data/labeled_sources/BePLi_v2/source/`로 다운로드 중입니다. 완료 여부는 `SOURCE.json`의 `download_complete`로 확인합니다. 파일 크기만으로 판단하면 안 됩니다: 병렬 재개 다운로드는 미리 공간을 할당할 수 있습니다.
+
+Littora 등 Roboflow 데이터는 다운로드 인증이 필요하며 아직 받지 못했습니다. 내려받은 것으로 표시하지 않습니다. 사진과 모델 배포 시 각 라이선스·출처를 유지해야 합니다.
+
+## 프로토콜 출처 및 외부 구성요소
+
+- WiFi UAV/FLOW 패킷 정보: https://github.com/marshallrichards/turbodrone/blob/main/docs/research/wifi_uav.md
+- FLOW 영상 수신 호환성 참고: https://github.com/OpenIPC/decoder/blob/v2/docs/toys.md
+- Chaquopy MIT, Python PSF, ONNX Runtime Web MIT. [외부 구성요소](docs/THIRD_PARTY.md).
+
