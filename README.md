@@ -9,7 +9,7 @@ python -m pip install -r requirements.txt
 python main.py --open
 ```
 
-주소: http://127.0.0.1:8770/?bridge=1 . 바탕화면의 **드론 조종 시작** 바로가기도 같은 명령을 실행합니다. 드론 Wi-Fi에 인터넷이 없어도 로컬 화면과 추론은 실행됩니다. WiFi UAV 앱은 종료하세요. GitHub Pages는 화면 배포용이며, 실제 영상·모터·추론에는 로컬 Python 실행이 필요합니다.
+주소: http://127.0.0.1:8770/?bridge=1 . 프로젝트 폴더 안의 **드론 조종 시작** 바로가기도 같은 명령을 실행합니다. 드론 Wi-Fi에 인터넷이 없어도 로컬 화면과 추론은 실행됩니다. WiFi UAV 앱은 종료하세요. GitHub Pages는 화면 배포용이며, 실제 영상·모터·추론에는 로컬 Python 실행이 필요합니다.
 
 ## 파일
 

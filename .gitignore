@@ -17,3 +17,6 @@ dataset/labels/
 dataset/review/
 dataset/downloads/
 dataset/raw/
+
+# 이 노트북용 실행 바로가기
+*.lnk
