@@ -2,6 +2,9 @@ import sys
 import threading
 import time
 import unittest
+import json
+import tempfile
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'pc'))
@@ -63,6 +66,21 @@ class WebControls(unittest.TestCase):
             camera.timestamp=0
             self.assertEqual(client.post('/drive',json={**command,'sequence':3},headers=headers).status_code,409)
             self.assertEqual(motors.state()['gripper'],0)
-            self.assertEqual(client.get('/net-model.onnx',headers=headers).status_code,404)
+            # The result must not depend on whether real weights are installed
+            # on this developer's machine. Only an explicitly net-trained file
+            # may be transferred; this fixture is never an inference model.
+            with tempfile.TemporaryDirectory(prefix='netrobot-model-api-') as temporary:
+                folder=Path(temporary)/'phone/models'
+                folder.mkdir(parents=True)
+                payload=b'unit-test transfer fixture, not a neural network'
+                (folder/'net.onnx').write_bytes(payload)
+                with patch('server.ROOT',Path(temporary)):
+                    (folder/'model.json').write_text(json.dumps({'trained_on_net':False}))
+                    with client.get('/net-model.onnx',headers=headers) as response:
+                        self.assertEqual(response.status_code,404)
+                    (folder/'model.json').write_text(json.dumps({'trained_on_net':True}))
+                    with client.get('/net-model.onnx',headers=headers) as response:
+                        self.assertEqual(response.status_code,200)
+                        self.assertEqual(response.data,payload)
         finally:
             motors.close()

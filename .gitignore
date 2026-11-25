@@ -12,6 +12,8 @@ data/raw/
 data/qa/
 data/search_cache/
 data/dataset/
+data/dataset_bepli/
+data/dataset_bepli_focus/
 models/runs/
 models/.yolo/
 # Python / Android / editors

@@ -2,6 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {joystickVector,differential} from '../web/control.js';
 import {decodeYolo,containRect} from '../web/vision.js';
+
+test('640 input boxes map back through letterbox to the camera frame',()=>{
+  const n=10,data=new Float32Array(5*n);
+  for(const [channel,value] of [320,320,200,160,.9].entries())data[channel*n]=value;
+  const boxes=decodeYolo(data,[1,5,n],{width:1280,height:720,size:640,threshold:.4});
+  assert.equal(boxes.length,1);
+  assert.deepEqual(boxes[0].box,[440,200,840,520]);
+});
 test('joystick dead zone, edge clamping and opposing wheel rotation',()=>{
   assert.deepEqual(joystickVector(1,1,60),{x:0,y:0});
   assert.deepEqual(joystickVector(0,-100,60),{x:0,y:1});

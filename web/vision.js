@@ -17,8 +17,17 @@ export function decodeYolo(data,dims,{width,height,size=320,threshold=.4,names=[
 }
 export function containRect(width,height,viewWidth,viewHeight){const scale=Math.min(viewWidth/width,viewHeight/height);return {scale,left:(viewWidth-width*scale)/2,top:(viewHeight-height*scale)/2}}
 export class Detector{
-  static async create(bytes){const ort=await import('./vendor/ort.wasm.min.mjs');ort.env.wasm.numThreads=1;ort.env.wasm.proxy=false;ort.env.wasm.wasmPaths=new URL('./vendor/',import.meta.url).href;const session=await ort.InferenceSession.create(bytes,{executionProviders:['wasm']});return new Detector(ort,session)}
-  constructor(ort,session){this.ort=ort;this.session=session;this.canvas=document.createElement('canvas');this.canvas.width=this.canvas.height=320;this.ctx=this.canvas.getContext('2d',{willReadFrequently:true})}
-  async predict(source,width,height,threshold){const size=320,scale=Math.min(size/width,size/height),nw=Math.round(width*scale),nh=Math.round(height*scale),left=Math.floor((size-nw)/2),top=Math.floor((size-nh)/2),ctx=this.ctx;ctx.fillStyle='rgb(114,114,114)';ctx.fillRect(0,0,size,size);ctx.drawImage(source,left,top,nw,nh);const pixels=ctx.getImageData(0,0,size,size).data,input=new Float32Array(3*size*size),plane=size*size;for(let i=0;i<plane;i++){input[i]=pixels[i*4]/255;input[plane+i]=pixels[i*4+1]/255;input[plane*2+i]=pixels[i*4+2]/255}const tensor=new this.ort.Tensor('float32',input,[1,3,size,size]);let outputs;try{outputs=await this.session.run({[this.session.inputNames[0]]:tensor});const output=outputs[this.session.outputNames[0]];return decodeYolo(output.data,output.dims,{width,height,threshold})}finally{tensor.dispose();if(outputs)Object.values(outputs).forEach(x=>x.dispose())}}
+  static async create(bytes){
+    const make=async(ort,proxy)=>{ort.env.wasm.numThreads=1;ort.env.wasm.proxy=proxy;ort.env.wasm.wasmPaths=new URL('./vendor/',import.meta.url).href;const session=await ort.InferenceSession.create(bytes.slice(0),{executionProviders:['wasm']});return new Detector(ort,session)};
+    const ort=await import('./vendor/ort.wasm.min.mjs?v=1.20.1');
+    try{return await make(ort,typeof Worker==='function')}catch(error){
+      if(typeof Worker!=='function')throw error;
+      // Some Android WebViews restrict module workers. A fresh module provides
+      // an independent fallback backend without a failed worker initializer.
+      return make(await import('./vendor/ort.wasm.min.mjs?main=1'),false);
+    }
+  }
+  constructor(ort,session){this.ort=ort;this.session=session;this.canvas=document.createElement('canvas');this.canvas.width=this.canvas.height=640;this.ctx=this.canvas.getContext('2d',{willReadFrequently:true})}
+  async predict(source,width,height,threshold){const size=640,scale=Math.min(size/width,size/height),nw=Math.round(width*scale),nh=Math.round(height*scale),left=Math.floor((size-nw)/2),top=Math.floor((size-nh)/2),ctx=this.ctx;ctx.fillStyle='rgb(114,114,114)';ctx.fillRect(0,0,size,size);ctx.drawImage(source,left,top,nw,nh);const pixels=ctx.getImageData(0,0,size,size).data,input=new Float32Array(3*size*size),plane=size*size;for(let i=0;i<plane;i++){input[i]=pixels[i*4]/255;input[plane+i]=pixels[i*4+1]/255;input[plane*2+i]=pixels[i*4+2]/255}const tensor=new this.ort.Tensor('float32',input,[1,3,size,size]);let outputs;try{outputs=await this.session.run({[this.session.inputNames[0]]:tensor});const output=outputs[this.session.outputNames[0]];return decodeYolo(output.data,output.dims,{width,height,threshold,size})}finally{tensor.dispose();if(outputs)Object.values(outputs).forEach(x=>x.dispose())}}
   async close(){await this.session.release()}
 }

@@ -14,7 +14,7 @@ from android.content import Context,Intent
 from android.provider import Settings
 from android.net import NetworkCapabilities,Uri
 from android.view import WindowManager
-from android.webkit import WebView,WebViewClient,WebResourceRequest,WebResourceResponse,WebChromeClient,ValueCallback
+from android.webkit import WebView,WebViewClient,WebResourceRequest,WebResourceResponse,WebChromeClient,ValueCallback,WebSettings
 from flow_video import Receiver
 
 ORIGIN='https://appassets.androidplatform.net'
@@ -132,6 +132,8 @@ class MainActivity(static_proxy(Activity)):
         settings=self.web.getSettings()
         settings.setJavaScriptEnabled(True)
         settings.setDomStorageEnabled(True)
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE)
+        self.web.clearCache(True)  # APK upgrades must load the new packaged JS/model manifest.
         settings.setAllowFileAccess(False)
         settings.setAllowContentAccess(True)  # SAF model file chooser, not arbitrary filesystem URLs.
         settings.setMediaPlaybackRequiresUserGesture(False)

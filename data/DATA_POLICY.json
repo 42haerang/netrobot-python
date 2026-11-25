@@ -6,7 +6,8 @@
   "sources": [
     {
       "name": "BePLi v2",
-      "status": "downloading",
+      "status": "downloaded_and_prepared_1000_labeled_images",
+      "archive_sha256": "5d27c9b103710223f928346f096a68d3f53211b1a30ce34d7815c8049458d711",
       "doi": "10.17882/96963",
       "class": "fishing_net",
       "license": "CC BY-NC-SA 4.0"
@@ -31,5 +32,7 @@
     "data/box_suggestions.json",
     "data/raw/"
   ],
-  "reason": "Search-result categories contained unrelated images; they are not ground truth and must not be used for training."
+  "reason": "Search-result categories contained unrelated images; they are not ground truth and must not be used for training.",
+  "active_dataset": "data/dataset_bepli_focus",
+  "retired_initial_test_images": 200
 }

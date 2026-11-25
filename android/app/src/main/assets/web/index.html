@@ -13,7 +13,6 @@
 <body>
   <main id="cockpit" aria-label="로봇 카메라 조종 화면">
     <div class="camera-stage" id="stage">
-      <video id="camera" autoplay muted playsinline hidden></video>
       <canvas id="remoteFrame" hidden aria-label="드론 카메라 영상"></canvas>
       <canvas id="demoFrame" hidden aria-label="조종 연습용 가상 화면"></canvas>
       <canvas id="boxes" aria-label="그물 감지 사각형"></canvas>
@@ -27,7 +26,7 @@
       <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 9 16 3l11 6v14l-11 6-11-6Z M5 9l11 7 11-7M16 16v13M10 6l12 7M10 13l12-7"/></svg><span>NET<span class="brand-light">ROBOT</span><small>VISION CONTROL</small></span></div>
       <div class="top-state"><span class="connection-pill" id="connectionState"><i></i><span>연결 대기</span></span><span class="source-label" id="sourceLabel">CAMERA VIEW</span></div>
       <div class="top-actions">
-<button id="cameraButton" class="icon-button" aria-label="카메라 켜기 또는 변경" title="카메라 켜기 또는 변경"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="13" rx="3"/><path d="m16 10 5-3v12l-5-3"/></svg></button>
+<button id="cameraButton" class="icon-button" aria-label="드론 영상 연결 설정" title="드론 영상 연결 설정"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="13" rx="3"/><path d="m16 10 5-3v12l-5-3"/></svg></button>
         <button id="settingsButton" class="icon-button" aria-label="카메라 및 연결 설정" title="카메라 및 연결 설정"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M9 4v6M15 14v6"/></svg></button>
         <button id="fullscreenButton" class="icon-button" aria-label="전체 화면" title="전체 화면"><svg viewBox="0 0 24 24"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/></svg></button>
         <button id="stopButton" class="stop-button"><span></span>긴급 정지</button>
@@ -39,8 +38,8 @@
 
     <section id="welcome" class="welcome-panel" aria-label="카메라 시작">
       <div class="camera-symbol"><svg viewBox="0 0 40 40"><rect x="5" y="11" width="30" height="24" rx="5"/><path d="m13 11 3-5h8l3 5"/><circle cx="20" cy="23" r="7"/></svg></div>
-      <h1>로봇의 시선으로.</h1><p>카메라를 켜고, 화면 위에서 바로 조종하세요.</p>
-      <button id="startCamera" class="primary-button"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="13" rx="3"/><path d="m16 10 5-3v12l-5-3"/></svg>이 기기 카메라 켜기</button>
+      <h1>로봇의 시선으로.</h1><p>드론 영상은 APK에서 연결하고, 화면 위에서 바로 조종하세요.</p>
+      <a id="welcomeApkDownload" class="primary-button apk-download" href="https://github.com/42haerang/netrobot-python/releases/download/android-v0.2.0/NetRobot-Drone-v0.2.0.apk">그물 감지 APK 다운로드</a>
       <div class="welcome-links"><button id="connectLaptop">드론 연결 설정</button><span></span><button id="startDemo">조종 연습</button></div>
       <p id="cameraError" class="error-message" role="status"></p>
     </section>
@@ -92,14 +91,14 @@
   <dialog id="settingsDialog" aria-labelledby="settingsTitle">
     <form id="connectionForm">
       <div class="dialog-heading"><div><span class="eyebrow">CONNECTION</span><h2 id="settingsTitle">카메라 및 연결</h2></div><button type="button" class="icon-button" id="closeSettings" aria-label="설정 닫기">✕</button></div>
-      <a id="apkDownload" class="primary-button apk-download" href="https://github.com/42haerang/netrobot-python/releases/download/android-v0.1.0/NetRobot-Drone.apk">Android APK 다운로드</a>
+      <a id="apkDownload" class="primary-button apk-download" href="https://github.com/42haerang/netrobot-python/releases/download/android-v0.2.0/NetRobot-Drone-v0.2.0.apk">그물 감지 APK 다운로드</a>
       <p class="field-help">APK 설치 후 FLOW_27AF9C Wi-Fi에 연결하세요. 인터넷이 없어도 앱과 영상 수신이 실행됩니다. 기존 WiFi UAV 앱은 종료하세요.</p>
       <div class="settings-tabs"><button type="button" id="droneWifiButton">Wi-Fi 설정</button><button type="button" id="demoButton">조종 연습</button></div>
       <label for="droneAddress">드론 카메라 주소</label><input id="droneAddress" type="text" placeholder="192.168.169.1" value="192.168.169.1" inputmode="decimal" spellcheck="false" autocomplete="off">
       <label for="jpegMode">영상 색상 방식</label><select id="jpegMode"><option value="zigzag">자동 품질 · 기본</option><option value="raster">호환 모드 · 색상 이상 시</option><option value="q50">고정 품질 · Q50</option></select>
       <p class="field-help">WiFi UAV / FLOW 계열 UDP 8800·8801을 APK에서 직접 수신합니다. 노트북 서버나 연결 코드는 필요하지 않습니다.</p>
       <button type="submit" class="primary-button" id="pairButton">드론 영상 연결</button>
-      <div class="model-section"><label for="modelFile">그물 YOLO 모델 불러오기</label><input id="modelFile" type="file" accept=".onnx"><p class="field-help">1종류(net) · YOLOv8 ONNX · 입력 320×320 · NMS 미포함. 불러온 모델은 이 기기 브라우저에서 실행됩니다.</p><label class="threshold-label" for="threshold">감지 신뢰도 <output id="thresholdValue">40%</output></label><input id="threshold" type="range" min="10" max="90" value="40" step="5"></div>
+      <div class="model-section"><label class="detection-toggle" for="detectionToggle"><span>그물 감지 켜기</span><input id="detectionToggle" type="checkbox" checked></label><label for="modelFile">그물 YOLO 모델 불러오기</label><input id="modelFile" type="file" accept=".onnx"><p class="field-help">1종류(net) · YOLOv8 ONNX · 입력 640×640 · NMS 미포함. 불러온 모델은 이 기기 브라우저에서 실행됩니다.</p><label class="threshold-label" for="threshold">감지 신뢰도 <output id="thresholdValue">40%</output></label><input id="threshold" type="range" min="10" max="90" value="40" step="5"></div>
       <p id="connectionError" class="error-message" role="status"></p>
     </form>
   </dialog>

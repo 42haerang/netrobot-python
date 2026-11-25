@@ -1,0 +1,25 @@
+{
+  "image": "bepli_002185.png",
+  "output_shape": [
+    1,
+    5,
+    8400
+  ],
+  "max_absolute_difference": 0.00146484375,
+  "allclose_rtol": 0.0001,
+  "box_allclose_atol": 0.05,
+  "confidence_allclose_atol": 1e-05,
+  "max_confidence_difference": 2.0563602447509766e-06,
+  "finite": true,
+  "engine_report": {
+    "engine": "Bundled ONNX Runtime Web WASM",
+    "dims": [
+      1,
+      5,
+      8400
+    ],
+    "inference_ms": 548,
+    "finite": true
+  },
+  "scope": "Bundled WASM on Windows Node; not Android device validation"
+}
