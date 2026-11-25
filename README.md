@@ -1,8 +1,39 @@
-# NetRobot · Python 중심 그물 감지와 조종 화면
+# NetRobot · 사이트 안에서 사용하는 조종 화면
 
-[웹사이트](https://42haerang.github.io/netrobot-python/) · [APK v0.3.0 다운로드](https://github.com/42haerang/netrobot-python/releases/download/android-v0.3.0/NetRobot-Drone-v0.3.0.apk)
+**[조종 사이트 열기](https://42haerang.github.io/netrobot-python/)**
 
-카메라를 배경으로 그물 박스와 신뢰도, 왼쪽 터치 조이스틱, 오른쪽 집게 열기·닫기를 표시합니다. 가운데 로봇은 바퀴 모터 4개와 집게 모터 1개·기어·집게를 보여 주며 숨길 수 있습니다. 디자인은 기본 버튼과 단순한 패널을 사용합니다.
+사이트를 열면 곧바로 왼쪽 터치 조이스틱, 오른쪽 집게 열기·닫기, 가운데 바퀴 모터 4개·집게 모터 1개·기어·집게 모형이 보입니다. 설치 페이지를 거치지 않으며 사이트에서 다른 앱을 실행하지 않습니다. 로봇 모형 숨김과 긴급 정지 버튼도 같은 화면에서 동작합니다. 현재는 실물 모터가 없어 모의 조종입니다.
+
+## 사이트 사용
+
+기본 그물 모델이 자동으로 로드됩니다. 첫 접속에는 실행 라이브러리와 모델 약 30 MB를 받으므로 인터넷이 필요합니다. 설정의 **영상 입력**에서 다음을 선택합니다.
+
+- **사진·영상 파일:** 기기의 파일을 사이트 안에서 열고 실제 모델로 그물 박스와 신뢰도를 표시합니다. 파일은 서버에 올리지 않습니다. 브라우저가 지원하는 영상 형식이어야 합니다.
+- **JPEG 카메라 주소:** 접근을 허용한 JPEG 이미지 주소를 반복해서 가져옵니다. CORS 허용이 필요하며 HTTPS 페이지에서는 HTTPS 주소를 사용해야 합니다. RTSP나 MJPEG 스트림 주소를 그대로 넣는 기능은 아닙니다.
+- **FLOW 드론 · Python 수신부:** 아래 Python 수신부가 제공하는 같은 조종 페이지에서 UDP 드론 영상을 연결합니다.
+
+조이스틱은 누른 방향으로 가상 바퀴를 움직이고 놓으면 멈춥니다. 집게도 누르는 동안 움직입니다. **조종 연습**은 표시용 가상 그림으로 실제 감지와 구분합니다. 로봇 모형 표시를 끄면 영상과 조종 버튼이 남습니다.
+
+## 실제 FLOW 드론 영상 · APK 없이 사용
+
+일반 웹사이트에는 raw UDP 수신 기능이 없습니다. FLOW/WiFi UAV 카메라는 Python으로 UDP 8800·8801을 받아 JPEG로 변환해야 합니다. 이 제약은 브라우저의 통신 API 때문이며 Wi-Fi 이름만으로 해결되지 않습니다. [Chrome 공식 설명](https://developer.chrome.com/docs/iwa/direct-sockets)을 참조하세요.
+
+드론 Wi-Fi에 연결한 Python 실행 기기에서 아래 명령을 실행하세요. 이 기기는 노트북이나 Python을 실행할 수 있는 다른 기기가 될 수 있습니다. 휴대폰 브라우저만으로 Python 수신부가 자동 실행되는 것은 아닙니다.
+
+```powershell
+python -m pip install requests
+python tools/build.py control
+```
+
+출력된 `http://127.0.0.1:8765/?bridge=1`을 같은 기기의 브라우저에서 열면 **사이트 안에서** 영상·YOLO·조종을 사용합니다. 기본 드론 주소는 `192.168.169.1`이며 노트북 웹캠은 사용하지 않습니다. 기존 WiFi UAV 앱은 종료하세요.
+
+수신 기기와 휴대폰이 같은 Wi-Fi에서 서로 통신할 수 있다면 다음처럼 실행하고, 휴대폰에서 수신 기기의 Wi-Fi IP 주소로 접속합니다.
+
+```powershell
+python tools/build.py control --bind 0.0.0.0
+```
+
+휴대폰 주소는 `http://<수신 기기의 Wi-Fi IP>:8765/?bridge=1`입니다. 드론 AP의 기기 간 통신 허용 여부와 방화벽 설정에 따라 연결이 달라질 수 있으며 해당 실물 구성을 확인하지는 못했습니다. 수신부가 모델·화면 파일까지 제공하므로 이 경로는 인터넷 없이 같은 네트워크에서 사용할 수 있습니다. GitHub 공개 사이트는 UDP 중계 서버가 아닙니다.
 
 ## 코드 파일
 
@@ -23,29 +54,7 @@ JPEG 헤더 100개도 내용이 같은지 확인한 뒤 `android/app/src/main/as
 
 Python 코드도 브라우저에서 실행하도록 Brython을 사용합니다. `web/vendor/`의 Brython·ONNX Runtime JS/WASM은 외부 실행 라이브러리이며 직접 만든 기능 코드는 Python에 있습니다. 브라우저 시작용 Brython 호출, Android의 화면 숨김·복귀 콜백 호출, Gradle/XML 등 Android 설정은 해당 플랫폼의 연결 형식을 사용합니다. 브라우저가 Python이나 UDP를 기본 지원하는 것은 아닙니다.
 
-## 설치와 사용
-
-1. 인터넷이 될 때 APK를 다운로드해 설치합니다. 64비트 Android 7.0 이상이 대상입니다.
-2. 원래 사용하던 **WiFi UAV** 앱을 종료합니다.
-3. 휴대폰 Wi-Fi를 `FLOW_27AF9C`에 연결하고 인터넷이 없어도 연결을 유지합니다.
-4. **NetRobot Drone**을 실행합니다. 기본 드론 주소는 `192.168.169.1`, 영상 포트는 UDP 8800·8801입니다.
-5. 색상이 이상하면 설정에서 영상 색상 방식을 변경합니다.
-
-APK는 `https://42haerang.github.io/netrobot-python/?app=1`을 엽니다. 인터넷이 있으면 GitHub의 HTML과 Python을 함께 읽고 버전·SHA256을 검사합니다. 인터넷이 없거나 다른 버전이면 **APK 안에 넣은 같은 화면**을 사용합니다. 모델과 외부 실행 라이브러리는 APK에서 읽으므로 드론 Wi-Fi에 인터넷이 없어도 사용할 수 있습니다. 설정에 화면 출처가 표시됩니다.
-
-일반 Chrome에서 여는 GitHub 사이트는 조종 연습과 ONNX 모델 불러오기가 가능합니다. 웹 브라우저에는 드론의 UDP 패킷을 받는 기능이 없으므로 실제 드론 영상 수신에는 Python 수신부를 넣은 APK가 필요합니다. APK가 연 사이트에서는 이 수신부를 통해 영상을 표시합니다. 노트북 웹캠·노트북 서버·연결 코드는 사용하지 않습니다.
-
-## YOLO 처리
-
-Python 수신부가 JPEG 한 장을 복원하면 `app.py`가 새 영상만 캔버스에 표시합니다. 별도 반복 함수가 영상을 640×640 회색 여백 이미지로 바꾸고 RGB/NCHW/0~1 숫자로 변환해 ONNX Runtime에 전달합니다. 출력은 `[1, 5, 8400]`이며 4개 좌표와 그물 점수입니다. 점수가 기준 이상인 후보의 여백을 제거하고 원래 영상 좌표로 바꿉니다. 같은 물체의 겹친 박스는 IoU 0.45 기준으로 하나만 남기고 박스와 점수를 그립니다.
-
-추론은 한 번에 한 장씩 실행하고 완료 후 0.1초를 쉽니다. 추론 시간이 추가되므로 고정 10 FPS를 보장하지 않습니다. 사진을 계속 저장하거나 사용 중에 자동 재학습하지 않습니다. 휴대폰에서 모델을 실행하며 클라우드 AI는 사용하지 않습니다. %는 개별 감지 신뢰도이고 전체 정확도가 아닙니다.
-
-기본 모델은 기존 v0.2.0과 같은 **BePLi focus v2**입니다. 이번 변경에서 재학습하거나 성능을 높였다고 주장하지 않습니다. 테스트 200장에서 정밀도 **12.11%**, 재현율 **13.46%**, mAP50 **4.06%**로 오탐과 누락이 많습니다. [모델 카드](models/MODEL_CARD.md), [출처](models/ATTRIBUTION.txt), `models/bepli_focus_test_metrics.json`을 확인하세요. 실제 바퀴·집게 연결은 아직 없으며 버튼은 모의 조종입니다.
-
-## 실행과 빌드
-
-Python 3.13을 사용합니다. 필요한 작업에 맞게 의존성을 설치하세요.
+## 미리보기와 검사
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -53,15 +62,13 @@ python tools/build.py preview --port 8765
 python -m unittest discover -s tests -v
 ```
 
-빌드에는 JDK 21, Android SDK 36이 필요합니다. SDK 경로는 `android/local.properties` 또는 `ANDROID_HOME`으로 지정합니다. Git에 대용량 모델을 넣지 않으므로 Release에서 `NetRobot-BePLi-focus-v2.onnx`를 받아 **`models/net.onnx`**로 저장해야 합니다. `models/model.json`의 SHA256과 일치해야 빌드합니다.
+Python 수신부는 조종 페이지와 JPEG API를 함께 제공합니다. 다른 사이트에서 오는 카메라 요청은 거부합니다. 모터 명령을 실물 Arduino로 전송하는 기능은 아직 없으며 가상 조종 상태에만 적용됩니다. 모터 드라이버와 배선이 정해진 뒤 실제 제어를 연결해야 합니다.
 
-```powershell
-$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
-$env:NETROBOT_BUILD_PYTHON = (Get-Command python).Source
-python tools/build.py apk
-```
+## 그물 모델
 
-`build.py`가 화면 코드의 해시를 HTML에 기록하고 `web/`와 모델을 Android 자원 폴더에 복사합니다. Gradle이 Chaquopy의 Python 런타임과 생성된 Android 연결 코드를 묶습니다. 직접 작성한 Java/Kotlin 파일은 없습니다. 결과는 `NetRobot-Drone-v0.3.0.apk`와 `.apk.sha256`입니다. 디버그 서명 APK이며 키는 공개하지 않습니다.
+기존 BePLi focus v2 ONNX와 모델 설명·출처를 `web/models/`에 포함했습니다. YOLO 호출과 좌표 변환은 브라우저의 Python에서 수행하고 ONNX Runtime Web이 계산합니다. 입력 640×640, 출력 `[1, 5, 8400]`, 기본 점수 40%, NMS IoU 0.45입니다. 추론은 한 장씩 실행하고 완료 후 0.1초를 쉬며 고정 10 FPS를 보장하지 않습니다. 기기에서 재학습하지 않습니다.
+
+가중치는 이번 변경에서 재학습하지 않았습니다. 테스트 정밀도 12.11%, 재현율 13.46%, mAP50 4.06%로 오탐과 누락이 많습니다. 박스의 %는 개별 감지 점수이며 전체 정확도가 아닙니다. [모델 카드](web/models/MODEL_CARD.md)와 [출처](web/models/ATTRIBUTION.txt)를 확인하세요.
 
 ## 데이터와 학습
 
@@ -78,6 +85,8 @@ python tools/model.py check <선택된모델.pt> <검증사진.png>
 
 기존 데이터 폴더를 덮어쓰지 않습니다. 후보 모델은 검증 사진으로 선택하고 마지막에 별도 테스트를 평가합니다. 이미 확인한 테스트를 반복해 튜닝할 경우 새로운 평가 데이터가 필요합니다. ONNX 수치 검사는 탐지 정확도나 Android 속도 검증과 별개입니다.
 
-## 확인 범위
+## 확인 범위와 이전 앱
 
-Python 계산·주소 제한·UDP 조각 순서/중복·JPEG 복원 검사와 Chromium의 Python 화면·모델 초기 추론·저장/복원 검사를 수행했습니다. v0.1.0 영상 수신은 사용자가 실물 기기에서 확인했습니다. 새 v0.3.0 APK의 Android 실행과 그물 성능은 실물 확인이 필요합니다. [기기 확인 기록](docs/DEVICE_CHECK.md), [외부 구성요소](docs/THIRD_PARTY.md)를 참조하세요.
+Chromium에서 기본 모델 자동 로드, 실제 검증 사진과 영상 파일의 감지, 집게 동작·해제와 로봇 숨김을 확인했습니다. HTTP 영상 API의 상태·JPEG 응답·잘못된 드론 IP·다른 사이트 요청 거부를 포함해 자동 검사 8개를 수행합니다. 새 웹 구성으로 실제 드론과 휴대폰을 함께 연결한 시험은 아직 하지 않았습니다.
+
+기존 APK와 Android 소스는 이전 사용자용으로 보존합니다. 현재 공개 사이트의 화면 버전은 4이며 이전 APK는 자체 버전 3 사본을 유지합니다. 이번 변경은 새 APK를 설치하거나 실행하게 하지 않습니다. 이력은 [기기 확인 기록](docs/DEVICE_CHECK.md), 라이선스는 [외부 구성요소](docs/THIRD_PARTY.md)에 기록합니다.

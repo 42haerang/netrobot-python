@@ -123,8 +123,12 @@ if sys.platform == "brython":
         "angles": [0.0] * 5,
         "last_animation": 0,
         "toast_timer": None,
+        "media_image": None,
+        "media_url": None,
     }
     native = window.URLSearchParams.new(window.location.search).get("app") == "1"
+    local_bridge = window.URLSearchParams.new(window.location.search).get("bridge") == "1"
+    receiver_available = native or local_bridge
     if native:
         document.body.classList.add("native-app")
 
@@ -152,7 +156,7 @@ if sys.platform == "brython":
             timer.clear_timeout(state["toast_timer"])
         state["toast_timer"] = timer.set_timeout(lambda: setattr(el("toast"), "hidden", True), 4500)
 
-    # APK의 Python 기능은 같은 사이트의 native 경로로 요청합니다.
+    # Python 수신부의 기능은 같은 사이트의 native 경로로 요청합니다.
     async def request(path, query=None):
         url = window.URL.new("native/" + path, window.location.href)
         for key, value in (query or {}).items():
@@ -460,7 +464,7 @@ if sys.platform == "brython":
         finally:
             db.close()
 
-    # 사용자 모델이 없으면 APK에 포함된 기본 그물 모델을 불러옵니다.
+    # 사용자 모델이 없으면 사이트의 기본 그물 모델을 자동으로 불러옵니다.
     async def restore_model():
         try:
             saved = await saved_model()
@@ -473,7 +477,9 @@ if sys.platform == "brython":
             info = json.loads(await wait(response.text()))
             if info.get("available") and info.get("trained_on_net"):
                 response = await wait(window.fetch("models/" + info["file"]))
-                await load_model(await wait(response.arrayBuffer()), "기본 시험용 모델")
+                data = await wait(response.arrayBuffer())
+                if await load_model(data, "기본 시험용 모델"):
+                    await saved_model(data, "기본 시험용 모델")
         except Exception as error:
             toast("기본 모델 확인: " + str(error))
 
@@ -489,14 +495,128 @@ if sys.platform == "brython":
         state["generation"] += 1
         state["source"], state["frame_time"], state["sequence"] = "none", 0, None
         state["detections"] = []
+        el("welcome").hidden = False
         el("remoteFrame").hidden = el("demoFrame").hidden = True
+        el("fileVideo").pause()
+        el("fileVideo").removeAttribute("src")
+        if state["media_image"] is not None:
+            state["media_image"].close()
+            state["media_image"] = None
+        if state["media_url"] is not None:
+            window.URL.revokeObjectURL(state["media_url"])
+            state["media_url"] = None
         stop_all()
+
+    # 입력 방식에 맞는 설정만 보여 줍니다.
+    def source_changed(event=None):
+        mode = el("sourceMode").value
+        el("fileSourceFields").hidden = mode != "file"
+        el("snapshotSourceFields").hidden = mode != "snapshot"
+        el("flowSourceFields").hidden = mode != "flow"
+        el("pairButton").hidden = mode == "file"
+        el("droneWifiButton").hidden = not native
+        el("connectionError").text = ""
+
+    # 읽어 온 사진이나 영상의 실제 픽셀을 같은 카메라 캔버스에 표시합니다.
+    def show_frame(source, width, height):
+        canvas = el("remoteFrame")
+        if canvas.getAttribute("width") != str(width):
+            canvas.attrs["width"] = width
+        if canvas.getAttribute("height") != str(height):
+            canvas.attrs["height"] = height
+        canvas.getContext("2d").drawImage(source, 0, 0)
+        state.update(width=width, height=height, frame_time=now(), frames=state["frames"] + 1)
+        el("welcome").hidden = el("previewBadge").hidden = True
+        canvas.hidden = False
+
+    # 사진과 영상 파일은 업로드하지 않고 현재 브라우저에서만 엽니다.
+    async def choose_media(event):
+        if not event.target.files.length:
+            return
+        file = event.target.files[0]
+        release_video()
+        generation = state["generation"]
+        try:
+            if file.type.startswith("image/"):
+                image = await wait(window.createImageBitmap(file))
+                if generation != state["generation"]:
+                    image.close()
+                    return
+                state["media_image"] = image
+            elif file.type.startswith("video/"):
+                state["media_url"] = window.URL.createObjectURL(file)
+                video = el("fileVideo")
+                video.src = state["media_url"]
+                await wait(video.play())
+            else:
+                raise ValueError("사진 또는 브라우저가 재생할 수 있는 영상 파일을 선택하세요.")
+            if generation != state["generation"]:
+                return
+            state["source"] = "media"
+            el("settingsDialog").close()
+            camera_status("파일 감지 · " + file.name, True)
+            aio.run(media_loop(generation))
+        except Exception as error:
+            el("connectionError").text = str(error)
+            toast("파일 열기 실패: " + str(error))
+
+    # 파일 프레임을 0.1초마다 갱신해 실제 모델의 입력으로 사용합니다.
+    async def media_loop(generation):
+        while state["source"] == "media" and generation == state["generation"]:
+            image = state["media_image"]
+            video = el("fileVideo")
+            if image is not None:
+                show_frame(image, image.width, image.height)
+            elif video.readyState >= 2:
+                show_frame(video, video.videoWidth, video.videoHeight)
+            await aio.sleep(0.1)
+
+    # 웹에서 읽을 수 있는 JPEG 카메라 주소를 반복해서 가져옵니다.
+    async def snapshot_loop(url, generation):
+        while state["source"] == "snapshot" and generation == state["generation"]:
+            try:
+                response = await wait(
+                    window.fetch(
+                        url, {"cache": "no-store", "signal": window.AbortSignal.timeout(5000)}
+                    )
+                )
+                if not response.ok:
+                    raise RuntimeError("카메라 응답: " + str(response.status))
+                image = await wait(window.createImageBitmap(await wait(response.blob())))
+                if generation == state["generation"]:
+                    show_frame(image, image.width, image.height)
+                    camera_status("JPEG 카메라 연결됨", True)
+                image.close()
+            except Exception:
+                state["detections"] = []
+                camera_status("카메라 주소·HTTPS·CORS 설정을 확인하세요")
+            await aio.sleep(0.1)
 
     async def connect(event=None):
         if event is not None:
             event.preventDefault()
-        if not native:
-            toast("드론 영상은 APK에서 연결합니다.")
+        mode = el("sourceMode").value
+        if mode == "file":
+            toast("설정에서 사진·영상 파일을 선택하세요.")
+            return
+        if mode == "snapshot":
+            try:
+                url = window.URL.new(el("snapshotUrl").value.strip(), window.location.href)
+            except Exception:
+                el("connectionError").text = "올바른 JPEG 주소를 입력하세요."
+                return
+            if url.protocol not in ("http:", "https:") or not el("snapshotUrl").value.strip():
+                el("connectionError").text = "HTTP 또는 HTTPS JPEG 주소를 입력하세요."
+                return
+            release_video()
+            state["source"] = "snapshot"
+            el("settingsDialog").close()
+            aio.run(snapshot_loop(url.href, state["generation"]))
+            return
+        if not receiver_available:
+            el("connectionError").text = (
+                "FLOW UDP 영상에는 Python 수신부가 필요합니다. 수신부가 출력한 브라우저 조종 주소를 여세요."
+            )
             return
         try:
             release_video()
@@ -544,11 +664,7 @@ if sys.platform == "brython":
                     frames=state["frames"] + 1,
                 )
                 camera_status("드론 영상 연결됨", True)
-                el("siteSource").text = "화면: " + (
-                    "GitHub 사이트"
-                    if status.get("site_source") == "github"
-                    else "저장된 오프라인 화면"
-                )
+                el("siteSource").text = "영상: Python 수신부 · 감지와 조종: 현재 브라우저"
             except Exception as error:
                 camera_status("영상 수신 대기 · Wi-Fi 확인")
             await aio.sleep(0.07)
@@ -560,7 +676,7 @@ if sys.platform == "brython":
                 state["enabled"]
                 and state["model"] is not None
                 and not state["loading"]
-                and state["source"] == "native"
+                and state["source"] in ("native", "media", "snapshot")
                 and now() - state["frame_time"] < 1000
                 and not document.hidden
             ):
@@ -612,7 +728,7 @@ if sys.platform == "brython":
     # 연습 모드에서는 실제 카메라 대신 표시용 그림을 사용합니다.
     def start_demo(event=None):
         release_video()
-        if native:
+        if receiver_available:
             aio.run(request("disconnect"))
         state["source"] = "demo"
         state["paused"] = False
@@ -715,13 +831,15 @@ if sys.platform == "brython":
         release_video()
 
     def resume_app():
-        if native and not el("settingsDialog").open and state["source"] != "demo":
+        if receiver_available and not el("settingsDialog").open and state["source"] == "none":
             aio.run(connect())
 
     window.netrobotPause, window.netrobotResume = pause_app, resume_app
     el("droneAddress").value = window.localStorage.getItem("netrobot-drone") or "192.168.169.1"
     el("jpegMode").value = window.localStorage.getItem("netrobot-jpeg-mode") or "zigzag"
     el("detectionToggle").checked = state["enabled"]
+    el("sourceMode").value = "flow" if receiver_available else "file"
+    source_changed()
 
     # 모든 버튼의 연결을 마지막에 모아 어디서 동작이 시작되는지 쉽게 봅니다.
     el("joystick").bind("pointerdown", start_joystick)
@@ -741,12 +859,16 @@ if sys.platform == "brython":
         "click", lambda event: aio.run(connect()) if native else open_settings()
     )
     el("connectionForm").bind("submit", submit_connection)
+    el("sourceMode").bind("change", source_changed)
+    el("cameraFile").bind("change", lambda event: aio.run(choose_media(event)))
     for name in ("startDemo", "demoButton"):
         el(name).bind("click", start_demo)
     el("droneWifiButton").bind(
         "click",
         lambda event: (
-            aio.run(request("wifi")) if native else toast("APK에서 Wi-Fi 설정을 열 수 있습니다.")
+            aio.run(request("wifi"))
+            if native
+            else toast("기기의 Wi-Fi 설정에서 드론에 연결하세요.")
         ),
     )
     el("hologramToggle").bind("click", toggle_robot)
@@ -763,5 +885,6 @@ if sys.platform == "brython":
     aio.run(restore_model())
     aio.run(detection_loop())
     window.requestAnimationFrame(animation)
-    if native:
+    camera_status("웹 조종 · 영상 연결 전")
+    if receiver_available:
         aio.run(connect())

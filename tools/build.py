@@ -5,12 +5,14 @@ from functools import partial
 import hashlib
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
+import ipaddress
 import os
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
+from urllib.parse import urlsplit, parse_qs
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,12 +29,14 @@ def stamp_screen():
     digest = hashlib.sha256(code).hexdigest()
     html = path.read_text(encoding="utf-8")
     html = re.sub(r'\s*<meta name="netrobot-python-sha256" content="[0-9a-f]+">', "", html)
-    html = html.replace(
-        '<meta name="netrobot-ui-version" content="3">',
-        '<meta name="netrobot-ui-version" content="3">\n  '
+    html = re.sub(
+        r'(<meta name="netrobot-ui-version" content="\d+">)',
+        lambda match: match[1]
+        + "\n  "
         + f'<meta name="netrobot-python-sha256" content="{digest}">',
+        html,
     )
-    path.write_text(html, encoding="utf-8")
+    path.write_text(html, encoding="utf-8", newline="\n")
 
 
 # 화면과 검증된 그물 모델을 APK 자원 폴더에 복사합니다.
@@ -98,6 +102,81 @@ class Handler(SimpleHTTPRequestHandler):
         ".mjs": "text/javascript",
         ".wasm": "application/wasm",
     }
+
+    # 영상 API는 같은 조종 페이지에서만 호출하며 다른 사이트의 요청은 거부합니다.
+    def do_GET(self):
+        parsed = urlsplit(self.path)
+        if not parsed.path.startswith("/native/"):
+            return super().do_GET()
+        host = self.headers.get("Host", "").split(":")[0]
+        try:
+            valid_host = host == "localhost" or ipaddress.ip_address(host).is_private
+        except ValueError:
+            valid_host = False
+        origin = self.headers.get("Origin")
+        if (
+            not valid_host
+            or self.headers.get("Sec-Fetch-Site") in ("cross-site", "same-site")
+            or (origin and origin != "http://" + self.headers.get("Host"))
+        ):
+            return self.answer({"error": "같은 조종 페이지에서 연결하세요."}, 403)
+        receiver = getattr(self.server, "receiver", None)
+        if receiver is None:
+            return self.answer({"error": "Python 수신부가 실행 중이지 않습니다."}, 503)
+        query = parse_qs(parsed.query)
+        try:
+            if parsed.path == "/native/connect":
+                receiver.connect(
+                    query.get("host", ["192.168.169.1"])[0], query.get("mode", ["zigzag"])[0]
+                )
+                return self.answer({"ok": True, "simulated": True})
+            if parsed.path == "/native/disconnect":
+                receiver.close()
+                return self.answer({"ok": True})
+            if parsed.path == "/native/status":
+                return self.answer({**receiver.status(), "site_source": "python"})
+            if parsed.path == "/native/frame.jpg":
+                frame, sequence = receiver.frame()
+                if frame is None:
+                    return self.answer({"error": "아직 드론 영상이 없습니다."}, 503)
+                return self.answer(frame, mime="image/jpeg")
+            return self.answer({"error": "없는 영상 경로입니다."}, 404)
+        except (ValueError, RuntimeError) as error:
+            return self.answer({"error": str(error)}, 400)
+
+    # 사진은 JPEG로, 상태와 오류는 JSON으로 돌려줍니다.
+    def answer(self, value, status=200, mime="application/json"):
+        body = value if isinstance(value, bytes) else json.dumps(value, ensure_ascii=False).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+
+# APK 없이 Python으로 드론 영상을 받고 같은 웹 조종 화면을 제공합니다.
+def control(port, bind):
+    from base64 import b64decode
+
+    sys.path.insert(0, str(ROOT / "android/app/src/main/python"))
+    from flow_video import Receiver
+
+    headers = json.loads((ROOT / "android/app/src/main/assets/jpeg_headers.json").read_text())
+    receiver = Receiver(lambda quality: b64decode(headers[str(quality)]))
+    stamp_screen()
+    server = ThreadingHTTPServer((bind, port), partial(Handler, directory=str(ROOT / "web")))
+    server.receiver = receiver
+    print(f"브라우저 조종: http://127.0.0.1:{port}/?bridge=1", flush=True)
+    if bind != "127.0.0.1":
+        print(f"휴대폰: http://<이 기기의 Wi-Fi IP>:{port}/?bridge=1", flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        receiver.close()
+        server.server_close()
 
 
 # 같은 코드를 브라우저에서 가볍게 실행해 볼 수 있습니다.
@@ -216,6 +295,9 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     preview_command = commands.add_parser("preview")
     preview_command.add_argument("--port", type=int, default=8765)
+    control_command = commands.add_parser("control")
+    control_command.add_argument("--port", type=int, default=8765)
+    control_command.add_argument("--bind", default="127.0.0.1")
     commands.add_parser("prepare")
     commands.add_parser("apk")
     publishing = commands.add_parser("publish")
@@ -226,6 +308,8 @@ def main():
     args = parser.parse_args()
     if args.command == "preview":
         preview(args.port)
+    elif args.command == "control":
+        control(args.port, args.bind)
     elif args.command == "prepare":
         prepare()
     elif args.command == "apk":

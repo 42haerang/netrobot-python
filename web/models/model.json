@@ -1,6 +1,61 @@
 {
-  "available": false,
+  "size": 640,
+  "names": [
+    "net"
+  ],
   "trained_on_net": true,
-  "download_url": "https://github.com/42haerang/netrobot-python/releases/download/android-v0.3.0/NetRobot-BePLi-focus-v2.onnx",
-  "status": "APK에는 기본 모델이 포함됩니다. 일반 웹에서는 Release의 ONNX를 내려받아 설정에서 선택하세요."
+  "sha256": "334d6cd0b8474b4f42e239ed1c3cefd8eb7df44f4cdb485dc833e1bbc70f7dfc",
+  "validated_for_bundle": true,
+  "source_checkpoint": "last.pt",
+  "framework": "Ultralytics YOLOv8, ONNX opset 12",
+  "dataset": "BePLi v2",
+  "dataset_doi": "10.17882/96963",
+  "dataset_license": "CC BY-NC-SA 4.0",
+  "model_revision": "bepli-focus-v2",
+  "train_images": 700,
+  "validation_images": 100,
+  "test_images": 200,
+  "test_metrics": {
+    "metrics/precision(B)": 0.12106930487908857,
+    "metrics/recall(B)": 0.1346153846153846,
+    "metrics/mAP50(B)": 0.04060909387257483,
+    "metrics/mAP50-95(B)": 0.015256822921277249,
+    "fitness": 0.017792050016407008
+  },
+  "quality": "experimental_low_accuracy",
+  "runtime": "ONNX Runtime Web 1.20.1 WASM",
+  "runtime_check": {
+    "image": "bepli_002185.png",
+    "output_shape": [
+      1,
+      5,
+      8400
+    ],
+    "max_absolute_difference": 0.00146484375,
+    "allclose_rtol": 0.0001,
+    "box_allclose_atol": 0.05,
+    "confidence_allclose_atol": 1e-05,
+    "max_confidence_difference": 2.0563602447509766e-06,
+    "finite": true,
+    "engine_report": {
+      "engine": "Bundled ONNX Runtime Web WASM",
+      "dims": [
+        1,
+        5,
+        8400
+      ],
+      "inference_ms": 548,
+      "finite": true
+    },
+    "scope": "Bundled WASM on Windows Node; not Android device validation"
+  },
+  "unique_training_source_images_all_stages": 1022,
+  "cpu_export_check": {
+    "image": "bepli_002185.png",
+    "finite": true,
+    "maximum_difference": 0.00191497802734375,
+    "scope": "PC OpenCV와 PyTorch 비교. Android 실행 검증은 별도."
+  },
+  "available": true,
+  "file": "net.onnx"
 }

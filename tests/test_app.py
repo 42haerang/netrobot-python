@@ -1,6 +1,7 @@
 """조종 계산, 실제 YOLO 좌표 변환, APK 사이트 주소 제한을 검사합니다."""
 
 import ast
+import json
 import importlib.util
 import hashlib
 import io
@@ -8,6 +9,11 @@ from pathlib import Path, PurePosixPath
 import unittest
 import re
 import threading
+import http.client
+from http.server import ThreadingHTTPServer
+from functools import partial
+import time
+import sys
 from types import SimpleNamespace
 from urllib.parse import urlsplit, unquote
 
@@ -107,6 +113,51 @@ class AppChecks(unittest.TestCase):
             "https://42haerang.github.io.evil.test/netrobot-python/",
         ):
             self.assertIsNone(path(url))
+
+
+# 실제 HTTP 요청으로 Python 영상 수신부의 상태·오류·접근 제한을 확인합니다.
+class BridgeChecks(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / "android/app/src/main/python"))
+        from flow_video import Receiver
+
+        spec = importlib.util.spec_from_file_location("build_tool", ROOT / "tools/build.py")
+        build = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(build)
+        self.server = ThreadingHTTPServer(
+            ("127.0.0.1", 0), partial(build.Handler, directory=str(ROOT / "web"))
+        )
+        self.server.receiver = Receiver(lambda quality: b"")
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.server.receiver.close()
+        self.thread.join()
+
+    def get(self, path, headers=None):
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+        connection.request("GET", path, headers=headers or {})
+        response = connection.getresponse()
+        status, body = response.status, response.read()
+        connection.close()
+        return status, body
+
+    def test_status_frames_and_private_drone_address(self):
+        status, body = self.get("/native/status")
+        self.assertEqual(status, 200)
+        self.assertFalse(json.loads(body)["ready"])
+        self.assertEqual(self.get("/native/frame.jpg")[0], 503)
+        self.assertEqual(self.get("/native/connect?host=8.8.8.8")[0], 400)
+        self.server.receiver.jpeg = b"camera-frame"
+        self.server.receiver.timestamp = time.monotonic()
+        self.assertEqual(self.get("/native/frame.jpg"), (200, b"camera-frame"))
+
+    def test_other_sites_cannot_read_camera(self):
+        self.assertEqual(self.get("/native/status", {"Sec-Fetch-Site": "cross-site"})[0], 403)
+        self.assertEqual(self.get("/native/status", {"Host": "evil.example"})[0], 403)
 
 
 if __name__ == "__main__":
