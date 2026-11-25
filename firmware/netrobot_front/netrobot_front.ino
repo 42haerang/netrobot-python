@@ -10,7 +10,7 @@ const byte ENB = 6, IN3 = 12, IN4 = 13;
 const byte SERVO_PIN = 10;
 const int LEFT_SIGN = 1, RIGHT_SIGN = 1;  // 뒤로 도는 바퀴만 -1로 바꾸세요.
 const int MAX_PWM = 255;                 // Arduino PWM 전체 범위: 최대 출력 100%.
-const int GRIP_CLOSED = 70, GRIP_OPEN = 110;
+const int GRIP_CLOSED = 0, GRIP_OPEN = 180;  // 이전 70~110도 제한을 해제합니다.
 const unsigned long TIMEOUT_MS = 600;
 SoftwareSerial bluetooth(2, 4);         // Arduino RX=D2, TX=D4(분압 후 HC-06 RXD).
 Servo gripper;
@@ -141,9 +141,9 @@ void loop() {
   unsigned long now = millis();
   if (armed && now - lastCommand > TIMEOUT_MS) stopAll();
 
-  // 집게 버튼을 누르는 동안만 천천히 움직이고, 놓으면 그 각도를 유지합니다.
-  if (armed && gripDirection && now - lastGripStep >= 30) {
-    gripAngle = constrain(gripAngle + gripDirection, GRIP_CLOSED, GRIP_OPEN);
+  // 누르는 동안 10ms마다 6도 명령으로 이동합니다. 실제 속도는 서보와 부하에 따릅니다.
+  if (armed && gripDirection && now - lastGripStep >= 10) {
+    gripAngle = constrain(gripAngle + gripDirection * 6, GRIP_CLOSED, GRIP_OPEN);
     gripper.write(gripAngle);
     lastGripStep = now;
   }
