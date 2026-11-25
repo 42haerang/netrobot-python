@@ -75,29 +75,14 @@ class AppChecks(unittest.TestCase):
             self.assertEqual(owner.screen_source, "github" if mode == "online" else "offline")
             self.assertEqual(bool(owner.screen), mode == "online")
 
-    # 손잡이를 놓았을 때 정지하고 전진·회전 시 네 바퀴 방향이 맞아야 합니다.
-    def test_joystick_and_four_wheels(self):
+    # 손잡이를 놓았을 때 정지하고 전진·회전 시 앞바퀴 두 개의 방향이 맞아야 합니다.
+    def test_joystick_and_two_front_wheels(self):
         self.assertEqual(app.joystick_vector(0, 0, 50), (0, 0))
         self.assertEqual(app.joystick_vector(0, -100, 50), (0, 1))
-        self.assertEqual(app.wheel_values(0, 1), [1, 1, 1, 1])
-        self.assertEqual(app.wheel_values(1, 0), [1, 1, -1, -1])
+        self.assertEqual(app.wheel_values(0, 1), [1, 1])
+        self.assertEqual(app.wheel_values(1, 0), [1, -1])
         with self.assertRaises(ValueError):
             app.wheel_values(float("nan"), 0)
-
-    # 1280×720 영상의 회색 여백을 제거하고 중복 박스를 한 개로 줄여야 합니다.
-    def test_yolo_letterbox_nms_and_invalid_values(self):
-        count = 8400
-        data = [0.0] * (5 * count)
-        for index, score in ((0, 0.9), (1, 0.8), (2, 0.2)):
-            for channel, value in enumerate((320, 320, 200, 100, score)):
-                data[channel * count + index] = value
-        boxes = app.decode_yolo(data, [1, 5, count], 1280, 720)
-        self.assertEqual(len(boxes), 1)
-        self.assertEqual(boxes[0]["box"], [440, 260, 840, 460])
-        data[0] = float("nan")
-        self.assertEqual(app.decode_yolo(data, [1, 5, count], 1280, 720)[0]["score"], 0.8)
-        with self.assertRaises(ValueError):
-            app.decode_yolo([], [1, 84, count], 1280, 720)
 
     # 다른 GitHub 프로젝트나 인코딩된 상위 폴더에는 영상 API를 열지 않습니다.
     def test_native_site_boundary(self):
@@ -158,6 +143,39 @@ class BridgeChecks(unittest.TestCase):
     def test_other_sites_cannot_read_camera(self):
         self.assertEqual(self.get("/native/status", {"Sec-Fetch-Site": "cross-site"})[0], 403)
         self.assertEqual(self.get("/native/status", {"Host": "evil.example"})[0], 403)
+
+    # 실제 HTTP 경로를 가상 포트에 연결해 활성화·명령·정지와 외부 요청 거부를 검사합니다.
+    def test_motor_http_controls_and_origin_boundary(self):
+        from test_motors import FirmwareSerial, MotorLink
+
+        link = MotorLink(FirmwareSerial, lambda: [{"port": "TEST"}])
+        self.server.motors = link
+
+        def post(action, data, origin=None):
+            connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+            headers = {"Content-Type": "application/json"}
+            if origin:
+                headers["Origin"] = origin
+            connection.request("POST", "/native/motor/" + action, json.dumps(data), headers)
+            response = connection.getresponse()
+            status, body = response.status, json.loads(response.read())
+            connection.close()
+            return status, body
+
+        try:
+            self.assertEqual(post("connect", {"port": "TEST"})[0], 200)
+            self.assertFalse(link.status()["armed"])
+            self.assertEqual(post("command", {"left": 80, "right": 80, "grip": 0})[0], 400)
+            self.assertEqual(post("arm", {}, "https://evil.example")[0], 403)
+            self.assertFalse(link.status()["armed"])
+            self.assertTrue(post("arm", {})[1]["armed"])
+            self.assertEqual(post("command", {"left": 80, "right": -80, "grip": 1})[0], 200)
+            self.assertEqual(link.values, (80, -80, 1))
+            self.assertEqual(post("command", {"left": 999, "right": 0, "grip": 0})[0], 400)
+            self.assertFalse(post("stop", {})[1]["armed"])
+            self.assertEqual(link.values, (0, 0, 0))
+        finally:
+            link.disconnect()
 
 
 if __name__ == "__main__":

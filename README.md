@@ -1,94 +1,76 @@
-# NetRobot · 사이트 안에서 사용하는 조종 화면
+# NetRobot · Python OpenCV와 실제 앞바퀴 제어
 
-**[조종 사이트 열기](https://42haerang.github.io/netrobot-python/)**
+[GitHub 소스](https://github.com/42haerang/netrobot-python) · [배포 화면](https://42haerang.github.io/netrobot-python/)
 
-**드론 Wi-Fi로 바꾸기 전에 로컬 조종 화면을 여세요.** `python tools/build.py control --open`을 한 번 실행하면 `http://127.0.0.1:8765/?bridge=1`이 열립니다. 이 주소는 노트북 자체에서 제공하므로 인터넷이 없어도 화면·모델·영상 수신을 실행합니다. 드론 Wi-Fi 연결을 기다리며 통신 실패 후에도 재시도합니다. GitHub 주소는 배포용이고 Wi-Fi에 연결하는 것만으로 드론 영상을 받지는 않습니다.
-
-사이트를 열면 곧바로 왼쪽 터치 조이스틱, 오른쪽 집게 열기·닫기, 가운데 바퀴 모터 4개·집게 모터 1개·기어·집게 모형이 보입니다. 설치 페이지를 거치지 않으며 사이트에서 다른 앱을 실행하지 않습니다. 로봇 모형 숨김과 긴급 정지 버튼도 같은 화면에서 동작합니다. 현재는 실물 모터가 없어 모의 조종입니다.
-
-## 사이트 사용
-
-기본 그물 모델이 자동으로 로드됩니다. 첫 접속에는 실행 라이브러리와 모델 약 30 MB를 받으므로 인터넷이 필요합니다. 설정의 **영상 입력**에서 다음을 선택합니다.
-
-- **사진·영상 파일:** 기기의 파일을 사이트 안에서 열고 실제 모델로 그물 박스와 신뢰도를 표시합니다. 파일은 서버에 올리지 않습니다. 브라우저가 지원하는 영상 형식이어야 합니다.
-- **JPEG 카메라 주소:** 접근을 허용한 JPEG 이미지 주소를 반복해서 가져옵니다. CORS 허용이 필요하며 HTTPS 페이지에서는 HTTPS 주소를 사용해야 합니다. RTSP나 MJPEG 스트림 주소를 그대로 넣는 기능은 아닙니다.
-- **FLOW 드론 · Python 수신부:** 아래 Python 수신부가 제공하는 같은 조종 페이지에서 UDP 드론 영상을 연결합니다.
-
-조이스틱은 누른 방향으로 가상 바퀴를 움직이고 놓으면 멈춥니다. 집게도 누르는 동안 움직입니다. **조종 연습**은 표시용 가상 그림으로 실제 감지와 구분합니다. 로봇 모형 표시를 끄면 영상과 조종 버튼이 남습니다.
-
-## 실제 FLOW 드론 영상 · APK 없이 사용
-
-일반 웹사이트에는 raw UDP 수신 기능이 없습니다. FLOW/WiFi UAV 카메라는 Python으로 UDP 8800·8801을 받아 JPEG로 변환해야 합니다. 이 제약은 브라우저의 통신 API 때문이며 Wi-Fi 이름만으로 해결되지 않습니다. [Chrome 공식 설명](https://developer.chrome.com/docs/iwa/direct-sockets)을 참조하세요.
-
-드론 Wi-Fi에 연결한 Python 실행 기기에서 아래 명령을 실행하세요. 이 기기는 노트북이나 Python을 실행할 수 있는 다른 기기가 될 수 있습니다. 휴대폰 브라우저만으로 Python 수신부가 자동 실행되는 것은 아닙니다.
-
-```powershell
-python -m pip install requests
-python tools/build.py control
-```
-
-출력된 `http://127.0.0.1:8765/?bridge=1`을 같은 기기의 브라우저에서 열면 **사이트 안에서** 영상·YOLO·조종을 사용합니다. 기본 드론 주소는 `192.168.169.1`이며 노트북 웹캠은 사용하지 않습니다. 기존 WiFi UAV 앱은 종료하세요.
-
-수신 기기와 휴대폰이 같은 Wi-Fi에서 서로 통신할 수 있다면 다음처럼 실행하고, 휴대폰에서 수신 기기의 Wi-Fi IP 주소로 접속합니다.
-
-```powershell
-python tools/build.py control --bind 0.0.0.0
-```
-
-휴대폰 주소는 `http://<수신 기기의 Wi-Fi IP>:8765/?bridge=1`입니다. 드론 AP의 기기 간 통신 허용 여부와 방화벽 설정에 따라 연결이 달라질 수 있으며 해당 실물 구성을 확인하지는 못했습니다. 수신부가 모델·화면 파일까지 제공하므로 이 경로는 인터넷 없이 같은 네트워크에서 사용할 수 있습니다. GitHub 공개 사이트는 UDP 중계 서버가 아닙니다.
-
-## 코드 파일
-
-직접 작성하는 주요 Python 파일은 **6개**로 묶었습니다. 각 기능 덩어리 앞에 한국어 주석을 넣고, 어려운 축약문과 한 줄에 여러 동작을 쓰는 코드를 풀었습니다.
-
-| 파일 | 하는 일 |
-| --- | --- |
-| `web/app.py` | 화면 버튼, 조이스틱, 모터 애니메이션, 모델 저장, 영상 표시, YOLO 실행과 박스 표시 |
-| `android/app/src/main/python/drone_android.py` | GitHub 화면 읽기, 오프라인 사본, Android 파일 선택·Wi-Fi 설정·영상 API |
-| `android/app/src/main/python/flow_video.py` | 실제로 연결이 확인된 FLOW/WiFi UAV UDP 영상 수신·JPEG 복원 |
-| `tools/data.py` | 공식 데이터 다운로드·압축 해제·중복 제거·사진 선별·YOLO 라벨 변환 |
-| `tools/model.py` | 학습·평가·ONNX 내보내기·수치 검사 |
-| `tools/build.py` | 웹 미리보기·APK 자원 준비·빌드·GitHub Release 업로드 |
-
-화면 구조·스타일·로봇 SVG는 **`web/index.html` 하나**에 모았습니다. 검사는 `tests/test_app.py`, `tests/test_flow_video.py` 두 파일입니다. 예전 JS 화면, PC 서버, Kivy 실험, 여러 수집 스크립트는 현재 소스에서 정리했고 Git의 `android-v0.2.0` 태그에 남아 있습니다. 원본 사진과 학습 결과 파일은 삭제하지 않았습니다.
-
-JPEG 헤더 100개도 내용이 같은지 확인한 뒤 `android/app/src/main/assets/jpeg_headers.json` 한 파일로 묶었습니다. `android/app/src/main/assets/web/`는 빌드할 때 만드는 사본이므로 Git에서는 제외하고 `web/` 원본만 관리합니다.
-
-Python 코드도 브라우저에서 실행하도록 Brython을 사용합니다. `web/vendor/`의 Brython·ONNX Runtime JS/WASM은 외부 실행 라이브러리이며 직접 만든 기능 코드는 Python에 있습니다. 브라우저 시작용 Brython 호출, Android의 화면 숨김·복귀 콜백 호출, Gradle/XML 등 Android 설정은 해당 플랫폼의 연결 형식을 사용합니다. 브라우저가 Python이나 UDP를 기본 지원하는 것은 아닙니다.
-
-## 미리보기와 검사
+실제 조종과 감지는 노트북의 **로컬 사이트**에서 실행합니다. 인터넷이 없는 드론 Wi-Fi에서도 동작하도록 화면·모델·라이브러리를 노트북에 저장합니다. GitHub Pages는 소스와 화면 배포용이며 Python이나 HC-06을 직접 실행하지 않습니다.
 
 ```powershell
 python -m pip install -r requirements.txt
-python tools/build.py preview --port 8765
+python tools/build.py control --open
+```
+
+조종 주소: **http://127.0.0.1:8765/?bridge=1**. 준비된 노트북에서는 바탕화면 **드론 조종 시작** 바로가기를 사용합니다. 드론 Wi-Fi에 연결하면 영상 수신을 자동으로 재시도합니다. 기존 WiFi UAV 앱은 종료하세요. 드론 영상에 노트북 웹캠을 쓰지 않습니다.
+
+## 실제 모터 연결
+
+구성은 Arduino UNO/Nano(ATmega328P), L298N, HC-06, 좌우 앞바퀴 DC 모터 2개, SG90 집게입니다. 뒷바퀴 모터와 로봇 그림은 제거했습니다. 조종이 모의 동작인 것처럼 표시하지 않으며, 연결·활성화 전에는 조종 입력을 받지 않습니다.
+
+1. Arduino IDE에서 `firmware/netrobot_front/netrobot_front.ino`를 업로드합니다. UNO 컴파일과 USB 업로드 검증을 수행했습니다.
+2. Windows에서 HC-06을 페어링합니다. HC-06은 Classic Bluetooth SPP이므로 BLE용 Web Bluetooth 대신 Python과 Windows COM 포트를 사용합니다.
+3. 로컬 사이트의 설정에서 **포트 새로고침 → HC-06 출력 COM → HC-06 연결**을 선택합니다. 현재 노트북에서 확인한 HC-06 포트는 COM13입니다. 다른 기기에서는 바뀔 수 있습니다.
+4. 펌웨어의 `NETROBOT 1` 응답이 확인된 뒤에만 연결됨으로 표시합니다. Windows 페어링이나 COM 포트가 열리는 것만으로는 제어 연결 성공으로 처리하지 않습니다.
+5. 바퀴를 띄운 상태에서 **모터 활성화**를 눌러 방향을 확인합니다. 그다음 왼쪽 조이스틱으로 앞바퀴 두 개를, 오른쪽 열기·닫기로 SG90을 조작합니다.
+
+### 배선
+
+| 부품 | Arduino 핀 |
+| --- | --- |
+| L298N ENA / IN1 / IN2 · 왼쪽 앞바퀴 | D5 / D7 / D8 |
+| L298N ENB / IN3 / IN4 · 오른쪽 앞바퀴 | D6 / D12 / D13 |
+| HC-06 TXD | D2 (소프트웨어 RX) |
+| HC-06 RXD | D4 (소프트웨어 TX)에서 1kΩ/2kΩ 분압 후 연결 |
+| SG90 신호 | D10 |
+| 신호 기준 GND | 공통 연결 |
+
+ENA/ENB의 항상 켜짐 점퍼는 제거하고 D5/D6을 연결합니다. L298N의 모터 전원과 5V 논리 전원도 각각 정상 공급되어야 합니다. 별도 전원들의 +를 임의로 묶지 않습니다. 실제 모듈의 5V 전원/레귤레이터 점퍼는 해당 보드 설명을 따르세요.
+
+한쪽 바퀴가 반대로 돌면 스케치의 `LEFT_SIGN` 또는 `RIGHT_SIGN`을 -1로 바꿉니다. SG90은 처음에 70~110도 범위로 제한했으며 실제 기구에 맞춰 `GRIP_CLOSED`, `GRIP_OPEN`을 조절합니다. UNO 코드만 C++이고 노트북 기능과 화면 동작은 Python입니다.
+
+### 정지 동작
+
+연결만으로는 모터를 켜지 않습니다. 조이스틱을 놓으면 두 바퀴 명령이 0이 되고 집게 버튼을 놓으면 현재 각도를 유지합니다. 긴급 정지·화면 이탈은 비활성화하며 복귀만으로 다시 움직이지 않습니다. 브라우저 입력이 0.4초 끊기면 Python에서 정지하고, Arduino도 유효 명령이 0.6초 없으면 정지합니다. 다시 활성화해야 재출발합니다. 표시되는 %는 명령 출력이며 측정한 바퀴 RPM이 아닙니다.
+
+스케치는 HC-06의 일반적인 UART 속도를 순서대로 확인하고 `HELLO`를 받은 속도로 고정합니다. USB 진단은 115200 baud이며 부팅 시 `NETROBOT READY - MOTORS DISARMED`, Bluetooth 인사 수신 시 `HC06 LINK <속도>`를 출력합니다. 인사 응답 전에 ARM 명령을 받아도 움직이지 않습니다.
+
+## OpenCV 처리
+
+실시간 추론은 **OpenCV 4.12의 `cv2.dnn.readNetFromONNX`, `blobFromImage`, `forward`, `NMSBoxes`**로 실행합니다. `imdecode`로 JPEG를 읽고, 640×640 회색 여백·RGB·0~1 입력으로 변환합니다. 출력 `[1,5,8400]`에서 후보를 고르고, 원본 좌표로 되돌린 뒤 NMS IoU 0.45로 중복을 줄입니다. 박스와 %는 `cv2.rectangle`, `cv2.putText`로 그려 JPEG로 반환합니다. 사이트는 완성된 영상을 표시합니다. ONNX는 모델 형식이며 ONNX Runtime Web을 실행하는 것이 아닙니다.
+
+설정에서 사진·영상 파일이나 접근을 허용한 JPEG 카메라 주소를 선택해도 같은 OpenCV 처리를 거칩니다. 파일 프레임은 현재 노트북의 로컬 서버로 전송하며 인터넷으로 보내지 않습니다. RTSP/MJPEG 주소를 그대로 입력하는 기능은 아닙니다. CORS/HTTPS를 허용하는 카메라 주소가 필요합니다.
+
+모델은 `models/net.onnx`와 `models/model.json`입니다. 이전 BePLi focus v2 가중치를 그대로 사용했습니다. 테스트 정밀도 12.11%, 재현율 13.46%, mAP50 4.06%인 시험용 모델로 오탐과 누락이 많습니다. OpenCV 전환으로 정확도가 개선됐다고 주장하지 않습니다. [모델 카드](models/MODEL_CARD.md)와 [출처](models/ATTRIBUTION.txt)를 확인하세요.
+
+## 코드 구성
+
+| 파일 | 역할 |
+| --- | --- |
+| `web/index.html` | 기본 화면과 스타일, 조이스틱, 집게, 연결 설정 |
+| `web/app.py` | 화면 입력, OpenCV 프레임 요청, 모터 명령 전송 |
+| `tools/build.py` | 로컬 사이트와 영상·OpenCV·모터 HTTP API |
+| `tools/vision.py` | OpenCV DNN 추론, NMS, 박스와 점수 표시 |
+| `tools/motors.py` | HC-06 COM 연결, 펌웨어 응답 확인, 주기적 전송·정지 |
+| `android/app/src/main/python/flow_video.py` | FLOW UDP 영상 복원·재접속. 비행 명령은 보내지 않음 |
+| `firmware/netrobot_front/netrobot_front.ino` | 앞바퀴 2개·SG90·통신 감시 |
+| `tools/data.py`, `tools/model.py` | 기존 공식 데이터 선별·학습·ONNX 내보내기 |
+
+브라우저의 Python은 Brython으로 실행합니다. 직접 작성한 기능용 JavaScript와 브라우저 ONNX Runtime은 사용하지 않습니다. 과거 Android 앱 소스와 Release는 보존하지만 현재 OpenCV/모터 조종 경로는 로컬 Python 사이트입니다.
+
+## 검사
+
+```powershell
 python -m unittest discover -s tests -v
 ```
 
-Python 수신부는 조종 페이지와 JPEG API를 함께 제공합니다. 다른 사이트에서 오는 카메라 요청은 거부합니다. 모터 명령을 실물 Arduino로 전송하는 기능은 아직 없으며 가상 조종 상태에만 적용됩니다. 모터 드라이버와 배선이 정해진 뒤 실제 제어를 연결해야 합니다.
+OpenCV 실제 ONNX 추론과 JPEG 출력, 잘못된 입력, 모터 연결 시 비활성 유지, 잘못된 출력 거부, 브라우저 신호 중단 정지, HTTP 접근 제한과 UDP JPEG 복원을 검사합니다. 모터 검사는 가상 직렬 포트로 수행하며 실물 회전 검증과 구분합니다.
 
-## 그물 모델
-
-기존 BePLi focus v2 ONNX와 모델 설명·출처를 `web/models/`에 포함했습니다. YOLO 호출과 좌표 변환은 브라우저의 Python에서 수행하고 ONNX Runtime Web이 계산합니다. 입력 640×640, 출력 `[1, 5, 8400]`, 기본 점수 40%, NMS IoU 0.45입니다. 추론은 한 장씩 실행하고 완료 후 0.1초를 쉬며 고정 10 FPS를 보장하지 않습니다. 기기에서 재학습하지 않습니다.
-
-가중치는 이번 변경에서 재학습하지 않았습니다. 테스트 정밀도 12.11%, 재현율 13.46%, mAP50 4.06%로 오탐과 누락이 많습니다. 박스의 %는 개별 감지 점수이며 전체 정확도가 아닙니다. [모델 카드](web/models/MODEL_CARD.md)와 [출처](web/models/ATTRIBUTION.txt)를 확인하세요.
-
-## 데이터와 학습
-
-직접 촬영 사진 대신 공식 BePLi v2 수작업 라벨을 사용합니다. 현재 데이터 1,000장은 그물 포함 500장·비슷하지만 그물 없는 300장·기타 200장입니다. 학습 700장+검증 100장=개발 800장, 테스트 200장으로 구분합니다. 음성 사진의 라벨은 빈 파일입니다. 자세한 이력은 [데이터 설명](docs/DATASET.md)을 보세요.
-
-```powershell
-python -m pip install -r requirements-training.txt
-python tools/data.py download data/labeled_sources/BePLi_v2/source
-python tools/data.py extract data/labeled_sources/BePLi_v2/source/106157.tar.gz data/labeled_sources/BePLi_v2/extracted
-python tools/data.py prepare <plastic_coco폴더> data/bepli_baseline_manifest.json <새데이터폴더>
-python tools/model.py train <새데이터폴더> <초기모델.pt> --epochs 8
-python tools/model.py check <선택된모델.pt> <검증사진.png>
-```
-
-기존 데이터 폴더를 덮어쓰지 않습니다. 후보 모델은 검증 사진으로 선택하고 마지막에 별도 테스트를 평가합니다. 이미 확인한 테스트를 반복해 튜닝할 경우 새로운 평가 데이터가 필요합니다. ONNX 수치 검사는 탐지 정확도나 Android 속도 검증과 별개입니다.
-
-## 확인 범위와 이전 앱
-
-Chromium에서 기본 모델 자동 로드, 실제 검증 사진과 영상 파일의 감지, 집게 동작·해제와 로봇 숨김을 확인했습니다. HTTP 영상 API의 상태·JPEG 응답·잘못된 드론 IP·다른 사이트 요청 거부를 포함해 자동 검사 8개를 수행합니다. 새 웹 구성으로 실제 드론과 휴대폰을 함께 연결한 시험은 아직 하지 않았습니다.
-
-기존 APK와 Android 소스는 이전 사용자용으로 보존합니다. 현재 공개 사이트의 화면 버전은 4이며 이전 APK는 자체 버전 3 사본을 유지합니다. 이번 변경은 새 APK를 설치하거나 실행하게 하지 않습니다. 이력은 [기기 확인 기록](docs/DEVICE_CHECK.md), 라이선스는 [외부 구성요소](docs/THIRD_PARTY.md)에 기록합니다.
+BePLi v2 공식 사진·수작업 fishing_net 라벨을 사용합니다. 현재 선별 1,000장은 그물 포함 500·비슷한 음성 300·기타 음성 200, 학습 700·검증 100·테스트 200입니다. 직접 촬영·생성된 그물·과거 검색 후보는 현재 학습에서 제외합니다. [데이터 이력](docs/DATASET.md), [기기 확인 기록](docs/DEVICE_CHECK.md), [외부 구성요소](docs/THIRD_PARTY.md)를 참고하세요.

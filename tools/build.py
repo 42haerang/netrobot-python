@@ -95,7 +95,7 @@ def prepare():
     print("Offline APK assets ready. Net-trained model included:", ready)
 
 
-# Windows에서도 라이브러리 파일의 MIME 형식을 정확하게 제공합니다.
+# 정적 화면과 로컬 카메라·OpenCV·모터 API를 같은 서버에서 제공합니다.
 class Handler(SimpleHTTPRequestHandler):
     extensions_map = {
         **SimpleHTTPRequestHandler.extensions_map,
@@ -104,56 +104,143 @@ class Handler(SimpleHTTPRequestHandler):
         ".wasm": "application/wasm",
     }
 
-    # 영상 API는 같은 조종 페이지에서만 호출하며 다른 사이트의 요청은 거부합니다.
-    def do_GET(self):
-        parsed = urlsplit(self.path)
-        if not parsed.path.startswith("/native/"):
-            return super().do_GET()
+    # 다른 웹사이트가 이 노트북의 카메라나 모터를 조작하지 못하게 합니다.
+    def local_request(self):
         host = self.headers.get("Host", "").split(":")[0]
         try:
             valid_host = host == "localhost" or ipaddress.ip_address(host).is_private
         except ValueError:
             valid_host = False
         origin = self.headers.get("Origin")
-        if (
-            not valid_host
-            or self.headers.get("Sec-Fetch-Site") in ("cross-site", "same-site")
-            or (origin and origin != "http://" + self.headers.get("Host"))
-        ):
-            return self.answer({"error": "같은 조종 페이지에서 연결하세요."}, 403)
+        return (
+            valid_host
+            and self.headers.get("Sec-Fetch-Site") not in ("cross-site", "same-site")
+            and (not origin or origin == "http://" + self.headers.get("Host"))
+        )
+
+    def do_GET(self):
+        parsed = urlsplit(self.path)
+        if not parsed.path.startswith("/native/"):
+            return super().do_GET()
+        if not self.local_request():
+            return self.answer({"error": "같은 로컬 조종 페이지에서 연결하세요."}, 403)
         receiver = getattr(self.server, "receiver", None)
-        if receiver is None:
-            return self.answer({"error": "Python 수신부가 실행 중이지 않습니다."}, 503)
+        vision = getattr(self.server, "vision", None)
+        motors = getattr(self.server, "motors", None)
         query = parse_qs(parsed.query)
         try:
+            if parsed.path == "/native/motor/ports":
+                return self.answer({"ports": motors.ports() if motors else []})
+            if parsed.path == "/native/motor/status":
+                return self.answer(
+                    motors.status()
+                    if motors
+                    else {
+                        "connected": False,
+                        "armed": False,
+                        "error": "Python 모터 수신부가 필요합니다.",
+                    }
+                )
+            if receiver is None:
+                return self.answer({"error": "Python 수신부가 실행 중이지 않습니다."}, 503)
             if parsed.path == "/native/connect":
                 receiver.connect(
                     query.get("host", ["192.168.169.1"])[0], query.get("mode", ["zigzag"])[0]
                 )
-                return self.answer({"ok": True, "simulated": True})
+                return self.answer({"ok": True})
             if parsed.path == "/native/disconnect":
                 receiver.close()
                 return self.answer({"ok": True})
             if parsed.path == "/native/status":
                 return self.answer(
-                    {**receiver.status(), "site_source": "python", "service": "netrobot-flow"}
+                    {
+                        **receiver.status(),
+                        "site_source": "python",
+                        "service": "netrobot-flow",
+                        "vision": (
+                            vision.status()
+                            if vision
+                            else {"ready": False, "has_frame": False, "error": "OpenCV 준비 전"}
+                        ),
+                    }
                 )
-            if parsed.path == "/native/frame.jpg":
+            if parsed.path == "/native/vision/frame.jpg":
+                frame = vision.frame() if vision else None
+            elif parsed.path == "/native/frame.jpg":
                 frame, sequence = receiver.frame()
-                if frame is None:
-                    return self.answer({"error": "아직 드론 영상이 없습니다."}, 503)
-                return self.answer(frame, mime="image/jpeg")
-            return self.answer({"error": "없는 영상 경로입니다."}, 404)
-        except (ValueError, RuntimeError) as error:
+            else:
+                return self.answer({"error": "없는 경로입니다."}, 404)
+            if frame is None:
+                return self.answer({"error": "아직 새 영상이 없습니다."}, 503)
+            return self.answer(frame, mime="image/jpeg")
+        except Exception as error:
             return self.answer({"error": str(error)}, 400)
 
-    # 사진은 JPEG로, 상태와 오류는 JSON으로 돌려줍니다.
-    def answer(self, value, status=200, mime="application/json"):
+    # 실제 모터 명령은 JSON POST로만 받습니다. 브라우저 외부 페이지 요청은 거부합니다.
+    def do_POST(self):
+        if not self.local_request():
+            return self.answer({"error": "같은 로컬 조종 페이지에서 연결하세요."}, 403)
+        path = urlsplit(self.path).path
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            limit = 4 * 1024 * 1024 if path == "/native/vision/detect" else 4096
+            if not 0 < length <= limit:
+                raise ValueError("요청 크기를 확인하세요.")
+            body = self.rfile.read(length)
+            vision, motors = getattr(self.server, "vision", None), getattr(
+                self.server, "motors", None
+            )
+            if path == "/native/vision/detect":
+                if vision is None:
+                    raise RuntimeError("OpenCV 수신부를 먼저 실행하세요.")
+                image, result = vision.process(body)
+                return self.answer(
+                    image,
+                    mime="image/jpeg",
+                    headers={
+                        "X-Net-Count": str(result["count"]),
+                        "X-Inference-Ms": str(result["inference_ms"]),
+                    },
+                )
+            if self.headers.get_content_type() != "application/json":
+                raise ValueError("JSON 명령이 필요합니다.")
+            data = json.loads(body)
+            if not isinstance(data, dict):
+                raise ValueError("명령 형식이 잘못되었습니다.")
+            if path == "/native/vision/config":
+                if vision is None:
+                    raise RuntimeError("OpenCV 수신부를 먼저 실행하세요.")
+                vision.configure(data.get("enabled"), data.get("threshold"))
+                return self.answer(vision.status())
+            if motors is None:
+                raise RuntimeError("Python 모터 수신부를 먼저 실행하세요.")
+            if path == "/native/motor/connect":
+                motors.connect(data.get("port", ""))
+            elif path == "/native/motor/arm":
+                motors.arm()
+            elif path == "/native/motor/stop":
+                motors.stop()
+            elif path == "/native/motor/disconnect":
+                motors.disconnect()
+            elif path == "/native/motor/command":
+                motors.command(data.get("left"), data.get("right"), data.get("grip"))
+            else:
+                return self.answer({"error": "없는 경로입니다."}, 404)
+            return self.answer(motors.status())
+        except Exception as error:
+            return self.answer({"error": str(error)}, 400)
+
+    # JPEG와 JSON을 명확한 길이로 돌려주고 프레임은 브라우저 캐시에 남기지 않습니다.
+    def answer(self, value, status=200, mime="application/json", headers=None):
         body = value if isinstance(value, bytes) else json.dumps(value, ensure_ascii=False).encode()
         self.send_response(status)
-        self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        for key, value in {
+            "Content-Type": mime,
+            "Content-Length": str(len(body)),
+            "Cache-Control": "no-store",
+            **(headers or {}),
+        }.items():
+            self.send_header(key, value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -164,6 +251,8 @@ def control(port, bind, open_browser=False):
 
     sys.path.insert(0, str(ROOT / "android/app/src/main/python"))
     from flow_video import Receiver
+    from vision import Vision
+    from motors import MotorLink
 
     url = f"http://127.0.0.1:{port}/?bridge=1"
     # 바로가기를 두 번 눌러도 기존 조종 화면만 다시 엽니다.
@@ -180,6 +269,8 @@ def control(port, bind, open_browser=False):
     stamp_screen()
     server = ThreadingHTTPServer((bind, port), partial(Handler, directory=str(ROOT / "web")))
     server.receiver = receiver
+    server.vision = Vision(receiver, ROOT / "models")
+    server.motors = MotorLink()
     print(f"브라우저 조종: {url}", flush=True)
     if open_browser:
         webbrowser.open(url)
@@ -190,6 +281,8 @@ def control(port, bind, open_browser=False):
     except KeyboardInterrupt:
         pass
     finally:
+        server.motors.disconnect()
+        server.vision.close()
         receiver.close()
         server.server_close()
 

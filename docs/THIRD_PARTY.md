@@ -1,7 +1,9 @@
 # 외부 구성요소
 
 - Brython 3.15.0: https://github.com/brython-dev/brython · BSD-3-Clause. 브라우저에서 Python을 실행합니다. `web/vendor/BRYTHON-LICENSE.txt`와 `brython-version.json`에 라이선스·원본 주소·패키지 SHA256을 기록합니다.
-- ONNX Runtime Web 1.20.1: https://github.com/microsoft/onnxruntime · MIT. 휴대폰 브라우저의 JS/WASM 신경망 실행 엔진입니다. `web/vendor/LICENSE.txt`에 전문이 있습니다.
+- OpenCV: https://opencv.org/ · Apache-2.0. 현재 영상 디코딩·전처리·YOLO DNN·NMS·박스 표시·JPEG 출력에 사용합니다. 이전 ONNX Runtime Web 배포본은 Git 이력에 보존하고 현재 웹 실행 경로에서 제거했습니다.
+- pySerial 3.5: https://pyserial.readthedocs.io/ · BSD. Windows의 HC-06 Bluetooth COM 통신에 사용합니다.
+- Arduino SoftwareSerial·Servo와 AVR 코어는 Arduino 공식 배포 라이선스를 따릅니다. 펌웨어는 사진의 핀 배선에 맞춰 직접 작성했습니다.
 - Chaquopy 17.2.0: https://chaquo.com/chaquopy/ · MIT. Android Python 및 생성된 연결 코드를 제공합니다. Python 3.13 런타임은 PSF 라이선스를 따릅니다.
 - Ultralytics YOLOv8: https://github.com/ultralytics/ultralytics · AGPL-3.0. 학습과 ONNX 내보내기에 사용합니다. `docs/licenses/ultralytics-AGPL-3.0.txt`에 전문을 보관합니다.
 - BePLi v2: https://doi.org/10.17882/96963 · CC BY-NC-SA 4.0. 현재 학습 사진과 라벨의 출처입니다. `models/ATTRIBUTION.txt`에 저자·변경 사항을 기록합니다. 원본 사진은 APK에 넣지 않습니다.

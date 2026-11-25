@@ -15,6 +15,12 @@ const unsigned long TIMEOUT_MS = 600;
 SoftwareSerial bluetooth(2, 4);         // Arduino RX=D2, TX=D4(분압 후 HC-06 RXD).
 Servo gripper;
 
+// 모듈의 UART 설정이 달라도 HELLO를 받은 속도로 고정합니다.
+const unsigned long BT_BAUDS[] = {9600, 38400, 19200, 57600, 115200, 4800};
+byte baudIndex = 0;
+bool baudLocked = false;
+unsigned long baudStarted = 0;
+
 // 연결만으로는 움직이지 않습니다. ARM 명령 뒤 유효한 조종 명령이 필요합니다.
 bool armed = false, overflow = false;
 char line[48];
@@ -41,13 +47,20 @@ void stopAll() {
 // 줄 단위 명령만 처리합니다. 잘못된 명령으로 모터가 켜지지는 않습니다.
 void command(char *text) {
   if (strcmp(text, "HELLO") == 0) {
+    baudLocked = true;
     stopAll();
+    Serial.print(F("HC06 LINK "));
+    Serial.println(BT_BAUDS[baudIndex]);
     bluetooth.println(F("NETROBOT 1"));
   } else if (strcmp(text, "STOP") == 0) {
     stopAll();
     bluetooth.println(F("STOPPED"));
   } else if (strcmp(text, "ARM") == 0) {
     stopAll();
+    if (!baudLocked) {
+      bluetooth.println(F("DISARMED"));
+      return;
+    }
     if (!gripper.attached()) {
       gripper.write(gripAngle);
       gripper.attach(SERVO_PIN);
@@ -84,11 +97,23 @@ void setup() {
   pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
   stopAll();
-  bluetooth.begin(9600);
+  Serial.begin(115200);
+  Serial.println(F("NETROBOT READY - MOTORS DISARMED"));
+  bluetooth.begin(BT_BAUDS[baudIndex]);
+  baudStarted = millis();
 }
 
 // 오래된 명령은 유지하지 않습니다. 긴 줄이나 통신 끊김은 정지로 처리합니다.
 void loop() {
+  // 인사 명령을 받기 전까지만 속도를 탐색하며 모터는 정지 상태입니다.
+  if (!baudLocked && millis() - baudStarted >= 1200) {
+    bluetooth.end();
+    baudIndex = (baudIndex + 1) % (sizeof(BT_BAUDS) / sizeof(BT_BAUDS[0]));
+    bluetooth.begin(BT_BAUDS[baudIndex]);
+    used = 0;
+    overflow = false;
+    baudStarted = millis();
+  }
   while (bluetooth.available()) {
     char value = bluetooth.read();
     if (value == '\n') {
