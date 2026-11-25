@@ -1,6 +1,5 @@
 """Protocol tests use generated JPEGs and UDP fragments; no drone commands are sent."""
 
-import io
 import json
 from base64 import b64decode
 from pathlib import Path
@@ -51,13 +50,12 @@ class FlowProtocol(unittest.TestCase):
         self.assertEqual(len(attempts), 2)
 
     def test_reordered_duplicate_fragments_and_real_jpeg_decode(self):
-        from PIL import Image
-
         rng = np.random.default_rng(2027)
         rgb = rng.integers(0, 256, (32, 64, 3), dtype=np.uint8)
-        out = io.BytesIO()
-        Image.fromarray(rgb).save(out, format="JPEG", quality=50, subsampling=0, optimize=False)
-        original = out.getvalue()
+        ok, encoded = cv2.imencode(".jpg", rgb, [cv2.IMWRITE_JPEG_QUALITY, 50,
+            cv2.IMWRITE_JPEG_SAMPLING_FACTOR, cv2.IMWRITE_JPEG_SAMPLING_FACTOR_444])
+        self.assertTrue(ok)
+        original = encoded.tobytes()
         pos = 2
         while original[pos + 1] != 0xDA:
             pos += 2 + int.from_bytes(original[pos + 2 : pos + 4], "big")
