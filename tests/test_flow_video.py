@@ -7,13 +7,15 @@ from pathlib import Path
 import struct
 import sys
 import unittest
+import threading
+from unittest.mock import patch
 
 import cv2
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "android/app/src/main/python"))
-from flow_video import Frames, parse_fragment
+from flow_video import Frames, parse_fragment, Receiver
 
 
 def header(q):
@@ -32,6 +34,22 @@ def packet(seq, index, total, body, width=64, height=32, q=50):
 
 
 class FlowProtocol(unittest.TestCase):
+    # Wi-Fi 전환 중 소켓 생성이 실패해도 다음 시도까지 수신기가 살아 있어야 합니다.
+    def test_retry_after_network_failure(self):
+        receiver = Receiver(header)
+        stop = threading.Event()
+        attempts = []
+
+        def unavailable_socket(*args):
+            attempts.append(1)
+            if len(attempts) == 2:
+                stop.set()
+            raise OSError("network temporarily unavailable")
+
+        with patch("flow_video.socket.socket", side_effect=unavailable_socket):
+            receiver._run("192.168.169.1", "zigzag", stop)
+        self.assertEqual(len(attempts), 2)
+
     def test_reordered_duplicate_fragments_and_real_jpeg_decode(self):
         from PIL import Image
 

@@ -217,8 +217,14 @@ class Receiver:
                 return None, self.sequence
             return self.jpeg, self.sequence
 
-    # 두 영상 포트를 확인하고 응답하는 포트에서 계속 수신합니다.
+    # Wi-Fi를 바꾸는 동안 통신이 실패해도 종료하지 않고 다시 연결합니다.
     def _run(self, host, mode, stop):
+        while not stop.is_set():
+            self._receive(host, mode, stop)
+            stop.wait(1)
+
+    # 두 영상 포트를 확인하고 응답하는 포트에서 계속 수신합니다.
+    def _receive(self, host, mode, stop):
         sockets = {}
         active = None
         frames = Frames(self.header_loader, mode)

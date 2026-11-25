@@ -129,6 +129,11 @@ if sys.platform == "brython":
     native = window.URLSearchParams.new(window.location.search).get("app") == "1"
     local_bridge = window.URLSearchParams.new(window.location.search).get("bridge") == "1"
     receiver_available = native or local_bridge
+    if receiver_available:
+        document["localControl"].hidden = True
+        document["connectionGuide"].text = (
+            "인터넷 없이 실행 중입니다. 드론 Wi-Fi에 연결하면 영상을 자동으로 기다립니다."
+        )
     if native:
         document.body.classList.add("native-app")
 

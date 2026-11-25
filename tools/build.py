@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import webbrowser
 from urllib.parse import urlsplit, parse_qs
 import requests
 
@@ -134,7 +135,9 @@ class Handler(SimpleHTTPRequestHandler):
                 receiver.close()
                 return self.answer({"ok": True})
             if parsed.path == "/native/status":
-                return self.answer({**receiver.status(), "site_source": "python"})
+                return self.answer(
+                    {**receiver.status(), "site_source": "python", "service": "netrobot-flow"}
+                )
             if parsed.path == "/native/frame.jpg":
                 frame, sequence = receiver.frame()
                 if frame is None:
@@ -156,18 +159,30 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 # APK 없이 Python으로 드론 영상을 받고 같은 웹 조종 화면을 제공합니다.
-def control(port, bind):
+def control(port, bind, open_browser=False):
     from base64 import b64decode
 
     sys.path.insert(0, str(ROOT / "android/app/src/main/python"))
     from flow_video import Receiver
 
+    url = f"http://127.0.0.1:{port}/?bridge=1"
+    # 바로가기를 두 번 눌러도 기존 조종 화면만 다시 엽니다.
+    if open_browser:
+        try:
+            status = requests.get(f"http://127.0.0.1:{port}/native/status", timeout=1).json()
+            if status.get("service") == "netrobot-flow":
+                webbrowser.open(url)
+                return
+        except (requests.RequestException, ValueError):
+            pass
     headers = json.loads((ROOT / "android/app/src/main/assets/jpeg_headers.json").read_text())
     receiver = Receiver(lambda quality: b64decode(headers[str(quality)]))
     stamp_screen()
     server = ThreadingHTTPServer((bind, port), partial(Handler, directory=str(ROOT / "web")))
     server.receiver = receiver
-    print(f"브라우저 조종: http://127.0.0.1:{port}/?bridge=1", flush=True)
+    print(f"브라우저 조종: {url}", flush=True)
+    if open_browser:
+        webbrowser.open(url)
     if bind != "127.0.0.1":
         print(f"휴대폰: http://<이 기기의 Wi-Fi IP>:{port}/?bridge=1", flush=True)
     try:
@@ -298,6 +313,7 @@ def main():
     control_command = commands.add_parser("control")
     control_command.add_argument("--port", type=int, default=8765)
     control_command.add_argument("--bind", default="127.0.0.1")
+    control_command.add_argument("--open", action="store_true")
     commands.add_parser("prepare")
     commands.add_parser("apk")
     publishing = commands.add_parser("publish")
@@ -309,7 +325,7 @@ def main():
     if args.command == "preview":
         preview(args.port)
     elif args.command == "control":
-        control(args.port, args.bind)
+        control(args.port, args.bind, args.open)
     elif args.command == "prepare":
         prepare()
     elif args.command == "apk":

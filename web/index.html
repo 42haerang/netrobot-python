@@ -19,7 +19,7 @@
 @media(max-height:500px){.camera-empty{top:58px}.camera-empty p,.camera-empty h1{display:none}.camera-empty .welcome-links{margin:0}.robot-hologram{top:52%}}
   </style>
   <meta name="netrobot-ui-version" content="4">
-  <meta name="netrobot-python-sha256" content="8523778fff5f565203d69c00abcdf406a36e4d8b832380208da33358f1b23a80">
+  <meta name="netrobot-python-sha256" content="88555aa38d71261788cfd22883ba25172f25ade97728f681a9a0ca587d2e0504">
   <script src="./vendor/brython.min.js"></script>
   <script src="./vendor/brython_stdlib.js"></script>
 </head>
@@ -52,7 +52,8 @@
 
     <section id="welcome" class="camera-empty" aria-label="영상 연결 대기">
       <div class="camera-symbol"><svg viewBox="0 0 40 40"><rect x="5" y="11" width="30" height="24" rx="5"/><path d="m13 11 3-5h8l3 5"/><circle cx="20" cy="23" r="7"/></svg></div>
-      <h1>영상 연결 대기</h1><p>왼쪽 조이스틱과 오른쪽 집게 버튼으로<br>이 화면에서 바로 조종하세요.</p>
+      <h1>영상 연결 대기</h1><p id="connectionGuide">드론 Wi-Fi에는 인터넷이 없습니다.<br>바탕화면의 ‘드론 조종 시작’을 먼저 실행하세요.</p>
+      <a id="localControl" class="primary-button" href="http://127.0.0.1:8765/?bridge=1">드론 자동 연결 화면 열기</a>
       <div class="welcome-links"><button id="connectLaptop">영상 연결</button><span></span><button id="startDemo">조종 연습</button></div>
       <p id="cameraError" class="error-message" role="status"></p>
     </section>
