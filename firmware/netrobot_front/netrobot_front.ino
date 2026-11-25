@@ -9,7 +9,7 @@ const byte ENA = 5, IN1 = 7, IN2 = 8;
 const byte ENB = 6, IN3 = 12, IN4 = 13;
 const byte SERVO_PIN = 10;
 const int LEFT_SIGN = 1, RIGHT_SIGN = 1;  // 뒤로 도는 바퀴만 -1로 바꾸세요.
-const int MAX_PWM = 153;                 // 첫 시험은 최대 출력 60%로 제한합니다.
+const int MAX_PWM = 255;                 // Arduino PWM 전체 범위: 최대 출력 100%.
 const int GRIP_CLOSED = 70, GRIP_OPEN = 110;
 const unsigned long TIMEOUT_MS = 600;
 SoftwareSerial bluetooth(2, 4);         // Arduino RX=D2, TX=D4(분압 후 HC-06 RXD).

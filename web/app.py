@@ -55,7 +55,7 @@ if sys.platform == "brython":
         "connected": False,
         "port": "",
         "armed": False,
-        "speed": 0.35,
+        "speed": 1.0,
         "enabled": True,
         "threshold": 0.4,
         "model_ready": False,
@@ -289,7 +289,7 @@ if sys.platform == "brython":
                 stop_all()
                 el("motorStatus").text = "모터 연결 확인 필요"
                 el("motorError").text = str(error)
-            await aio.sleep(0.08 if state["armed"] else 0.5)
+            await aio.sleep(0.08 if state["armed"] else 0.1)
 
     # 긴급 정지와 화면 이탈은 비활성화합니다. 복귀만으로 다시 켜지지 않습니다.
     def halt(event=None):

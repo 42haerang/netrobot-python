@@ -127,7 +127,7 @@ class MotorLink:
         values = (left, right, grip)
         if any(type(value) is not int for value in values):
             raise ValueError("모터 명령은 정수여야 합니다.")
-        if abs(left) > 153 or abs(right) > 153 or grip not in (-1, 0, 1):
+        if abs(left) > 255 or abs(right) > 255 or grip not in (-1, 0, 1):
             raise ValueError("모터 출력 범위가 잘못되었습니다.")
         with self.lock:
             if not self.armed or self.serial is None:

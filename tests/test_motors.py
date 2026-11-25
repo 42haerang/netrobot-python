@@ -60,7 +60,9 @@ class MotorsChecks(unittest.TestCase):
 
     def test_rejects_invalid_output_and_unknown_port(self):
         self.link.arm()
-        for values in ((154, 0, 0), (0, -154, 0), (True, 0, 0), (0, 0, 2)):
+        self.link.command(255, -255, 0)
+        self.assertEqual(self.link.values, (255, -255, 0))
+        for values in ((256, 0, 0), (0, -256, 0), (True, 0, 0), (0, 0, 2)):
             with self.assertRaises(ValueError):
                 self.link.command(*values)
         with self.assertRaises(ValueError):
