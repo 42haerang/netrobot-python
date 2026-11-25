@@ -1,4 +1,4 @@
-"""HC-06의 Windows Bluetooth COM 포트로 앞바퀴 2개와 SG90을 조종합니다."""
+"""Arduino USB 또는 HC-06 COM 포트로 앞바퀴 2개와 SG90을 조종합니다."""
 
 import threading
 import time
@@ -10,8 +10,8 @@ import serial
 from serial.tools import list_ports
 
 
-# Bluetooth 직렬 포트만 표시합니다. 임의의 USB 장치에 명령을 보내지 않습니다.
-def bluetooth_ports():
+# 확인 가능한 Arduino UNO/Nano와 Bluetooth 포트만 표시합니다.
+def control_ports():
     # Windows가 표시한 HC-06의 장치 주소로 출력 포트 이름을 붙입니다.
     addresses = []
     if os.name == "nt":
@@ -35,27 +35,33 @@ def bluetooth_ports():
     result = []
     for port in list_ports.comports():
         text = f"{port.description} {port.hwid}"
-        if "bluetooth" in text.lower() or "bthenum" in text.lower():
+        if port.vid in (0x2341, 0x2A03) and port.pid in (0x0043, 0x0001, 0x0243, 0x0042):
+            result.append({"port": port.device, "description": f"Arduino USB ({port.device})",
+                           "transport": "usb", "baud": 115200, "hc06": False})
+        elif "bluetooth" in text.lower() or "bthenum" in text.lower():
             matched = any(address.lower() in port.hwid.lower() for address in addresses)
             result.append(
                 {
                     "port": port.device,
                     "description": f"HC-06 ({port.device})" if matched else port.description,
                     "hc06": matched,
+                    "transport": "bluetooth",
+                    "baud": 9600,
                 }
             )
-    return sorted(result, key=lambda item: not item["hc06"])
+    return sorted(result, key=lambda item: (item["transport"] != "usb", not item["hc06"]))
 
 
 # 모든 직렬 입출력은 잠금으로 보호해 HTTP 요청과 전송 스레드가 섞이지 않게 합니다.
 class MotorLink:
-    def __init__(self, opener=serial.Serial, ports=bluetooth_ports):
+    def __init__(self, opener=serial.Serial, ports=control_ports):
         self.opener, self.ports = opener, ports
         self.lock = threading.RLock()
         self.serial = None
         self.thread = None
         self.stop_event = threading.Event()
         self.port = ""
+        self.transport = ""
         self.armed = False
         self.error = ""
         self.values = (0, 0, 0)
@@ -72,17 +78,20 @@ class MotorLink:
                 return answer
             if answer in ("ERROR", "DISARMED"):
                 raise RuntimeError("아두이노가 명령을 거부했습니다. 다시 활성화하세요.")
-        raise RuntimeError("아두이노 응답이 없습니다. 코드 업로드·9600 baud·출력 COM을 확인하세요.")
+        raise RuntimeError("아두이노 응답이 없습니다. 코드 업로드와 USB/HC-06 출력 COM을 확인하세요.")
 
     # 펌웨어의 인사 응답을 받은 뒤에만 연결됨으로 표시합니다. 모터는 아직 비활성입니다.
     def connect(self, port):
-        if port not in [item["port"] for item in self.ports()]:
-            raise ValueError("목록에 있는 HC-06 Bluetooth COM 포트를 선택하세요.")
+        available = {item["port"]: item for item in self.ports()}
+        if port not in available:
+            raise ValueError("목록에 있는 Arduino USB 또는 HC-06 COM 포트를 선택하세요.")
         self.disconnect()
         with self.lock:
             self.port = port
+            self.transport = available[port].get("transport", "bluetooth")
             try:
-                self.serial = self.opener(port, 9600, timeout=0.06, write_timeout=0.2)
+                baud = available[port].get("baud", 9600)
+                self.serial = self.opener(port, baud, timeout=0.06, write_timeout=0.2)
                 # Windows SPP 연결 직후 첫 데이터가 늦어질 수 있어 인사를 다시 보냅니다.
                 deadline = time.monotonic() + 12
                 while True:
@@ -107,7 +116,7 @@ class MotorLink:
     def arm(self):
         with self.lock:
             if self.serial is None:
-                raise RuntimeError("HC-06을 먼저 연결하세요.")
+                raise RuntimeError("아두이노를 먼저 연결하세요.")
             self.exchange("ARM", "ARMED")
             self.values = (0, 0, 0)
             self.last_input = time.monotonic()
@@ -182,6 +191,7 @@ class MotorLink:
                 "connected": self.serial is not None,
                 "armed": self.armed,
                 "port": self.port,
+                "transport": self.transport,
                 "error": self.error,
                 "gripper_angle": self.angle,
                 "left": self.values[0],

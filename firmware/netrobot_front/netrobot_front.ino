@@ -1,4 +1,4 @@
-// UNO/Nano: 앞바퀴 DC 모터 2개 + SG90 집게 + HC-06. 뒷바퀴 출력은 없습니다.
+// UNO/Nano: 앞바퀴 DC 모터 2개 + SG90 집게 + USB/HC-06. 뒷바퀴 출력은 없습니다.
 #include <SoftwareSerial.h>
 #include <Servo.h>
 #include <stdio.h>
@@ -22,9 +22,10 @@ bool baudLocked = false;
 unsigned long baudStarted = 0;
 
 // 연결만으로는 움직이지 않습니다. ARM 명령 뒤 유효한 조종 명령이 필요합니다.
-bool armed = false, overflow = false;
-char line[48];
-byte used = 0;
+bool armed = false, overflow = false, usbOverflow = false;
+char line[48], usbLine[48];
+byte used = 0, usbUsed = 0;
+Stream *controller = nullptr;
 int gripAngle = 90, gripDirection = 0;
 unsigned long lastCommand = 0, lastGripStep = 0;
 
@@ -45,20 +46,23 @@ void stopAll() {
 }
 
 // 줄 단위 명령만 처리합니다. 잘못된 명령으로 모터가 켜지지는 않습니다.
-void command(char *text) {
+void command(char *text, Stream &reply) {
   if (strcmp(text, "HELLO") == 0) {
-    baudLocked = true;
     stopAll();
-    Serial.print(F("HC06 LINK "));
-    Serial.println(BT_BAUDS[baudIndex]);
-    bluetooth.println(F("NETROBOT 1"));
+    controller = &reply;
+    if (&reply == &bluetooth) {
+      baudLocked = true;
+      Serial.print(F("HC06 LINK "));
+      Serial.println(BT_BAUDS[baudIndex]);
+    }
+    reply.println(F("NETROBOT 1"));
   } else if (strcmp(text, "STOP") == 0) {
     stopAll();
-    bluetooth.println(F("STOPPED"));
+    reply.println(F("STOPPED"));
   } else if (strcmp(text, "ARM") == 0) {
     stopAll();
-    if (!baudLocked) {
-      bluetooth.println(F("DISARMED"));
+    if (controller != &reply) {
+      reply.println(F("DISARMED"));
       return;
     }
     if (!gripper.attached()) {
@@ -67,7 +71,7 @@ void command(char *text) {
     }
     lastCommand = millis();
     armed = true;
-    bluetooth.println(F("ARMED"));
+    reply.println(F("ARMED"));
   } else {
     long left, right, grip;
     char extra;
@@ -75,19 +79,19 @@ void command(char *text) {
     if (count != 3 || left < -MAX_PWM || left > MAX_PWM ||
         right < -MAX_PWM || right > MAX_PWM || grip < -1 || grip > 1) {
       stopAll();
-      bluetooth.println(F("ERROR"));
+      reply.println(F("ERROR"));
       return;
     }
-    if (!armed) {
-      bluetooth.println(F("DISARMED"));
+    if (!armed || controller != &reply) {
+      reply.println(F("DISARMED"));
       return;
     }
     motor(ENA, IN1, IN2, left * LEFT_SIGN);
     motor(ENB, IN3, IN4, right * RIGHT_SIGN);
     gripDirection = grip;
     lastCommand = millis();
-    bluetooth.print(F("OK "));
-    bluetooth.println(gripAngle);
+    reply.print(F("OK "));
+    reply.println(gripAngle);
   }
 }
 
@@ -103,10 +107,28 @@ void setup() {
   baudStarted = millis();
 }
 
+// USB와 HC-06은 같은 명령을 쓰고, 각 입력의 줄 버퍼는 따로 보관합니다.
+void readCommands(Stream &input, char *line, byte &used, bool &overflow) {
+  while (input.available()) {
+    char value = input.read();
+    if (value == '\n') {
+      if (!overflow) {
+        line[used] = '\0';
+        command(line, input);
+      }
+      used = 0;
+      overflow = false;
+    } else if (value != '\r') {
+      if (used < 47 && !overflow) line[used++] = value;
+      else { overflow = true; stopAll(); }
+    }
+  }
+}
+
 // 오래된 명령은 유지하지 않습니다. 긴 줄이나 통신 끊김은 정지로 처리합니다.
 void loop() {
   // 인사 명령을 받기 전까지만 속도를 탐색하며 모터는 정지 상태입니다.
-  if (!baudLocked && millis() - baudStarted >= 1200) {
+  if (!baudLocked && controller != &Serial && millis() - baudStarted >= 1200) {
     bluetooth.end();
     baudIndex = (baudIndex + 1) % (sizeof(BT_BAUDS) / sizeof(BT_BAUDS[0]));
     bluetooth.begin(BT_BAUDS[baudIndex]);
@@ -114,20 +136,8 @@ void loop() {
     overflow = false;
     baudStarted = millis();
   }
-  while (bluetooth.available()) {
-    char value = bluetooth.read();
-    if (value == '\n') {
-      if (!overflow) {
-        line[used] = '\0';
-        command(line);
-      }
-      used = 0;
-      overflow = false;
-    } else if (value != '\r') {
-      if (used < sizeof(line) - 1 && !overflow) line[used++] = value;
-      else { overflow = true; stopAll(); }
-    }
-  }
+  readCommands(Serial, usbLine, usbUsed, usbOverflow);
+  readCommands(bluetooth, line, used, overflow);
   unsigned long now = millis();
   if (armed && now - lastCommand > TIMEOUT_MS) stopAll();
 

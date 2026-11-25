@@ -65,3 +65,20 @@ class MotorsChecks(unittest.TestCase):
                 self.link.command(*values)
         with self.assertRaises(ValueError):
             self.link.connect("OTHER")
+
+    # USB는 HC-06과 다른 115200 속도를 쓰며 연결만으로 활성화되지 않습니다.
+    def test_usb_connection_uses_usb_baud_without_arming(self):
+        opened = []
+
+        def opener(port, baud, **options):
+            opened.append((port, baud))
+            return FirmwareSerial()
+
+        link = MotorLink(opener, lambda: [{"port": "USB_TEST", "transport": "usb", "baud": 115200}])
+        try:
+            link.connect("USB_TEST")
+            self.assertEqual(opened, [("USB_TEST", 115200)])
+            self.assertEqual(link.status()["transport"], "usb")
+            self.assertFalse(link.status()["armed"])
+        finally:
+            link.disconnect()

@@ -221,7 +221,7 @@ if sys.platform == "brython":
         text = (
             "모터 활성화됨"
             if state["armed"]
-            else ("HC-06 연결됨 · 비활성" if state["connected"] else "HC-06 연결 안됨")
+            else (("USB 연결됨 · 비활성" if status.get("transport") == "usb" else "HC-06 연결됨 · 비활성") if state["connected"] else "아두이노 연결 안됨")
         )
         el("motorStatus").text = text
         el("motorError").text = status.get("error", "")
@@ -243,14 +243,14 @@ if sys.platform == "brython":
             if state["port"]:
                 select.value = state["port"]
             if not result["ports"]:
-                el("motorError").text = "Windows에서 HC-06을 페어링한 뒤 포트 새로고침을 누르세요."
+                el("motorError").text = "Arduino USB를 꽂거나 HC-06을 페어링한 뒤 포트를 새로고침하세요."
         except Exception as error:
             el("motorError").text = str(error)
 
     async def connect_motor(event=None):
         try:
             motor_status(await api("motor/connect", {"port": el("motorPort").value}))
-            toast("HC-06 응답 확인. 모터는 아직 비활성입니다.")
+            toast("아두이노 응답 확인. 모터는 아직 비활성입니다.")
         except Exception as error:
             el("motorError").text = str(error)
 
@@ -564,7 +564,7 @@ if sys.platform == "brython":
     el("localControl").hidden = local
     if local:
         el("connectionGuide").text = (
-            "인터넷 없이 실행 중입니다. HC-06 연결 후 모터 활성화를 누르세요."
+            "Arduino USB 또는 HC-06 연결 후 모터 활성화를 누르세요."
         )
     el("droneWifiButton").hidden = True
     source_changed()
