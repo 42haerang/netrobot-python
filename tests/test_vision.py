@@ -4,6 +4,8 @@ from pathlib import Path
 import sys
 import unittest
 import threading
+import tempfile
+import shutil
 from types import SimpleNamespace
 import cv2
 import numpy as np
@@ -34,6 +36,13 @@ class VisionChecks(unittest.TestCase):
         self.assertEqual(result["count"], 0)
         with self.assertRaises(ValueError):
             self.detector.process(b"not a jpeg")
+
+    # 한글 바탕화면처럼 ASCII가 아닌 경로에서도 실제 모델을 읽을 수 있어야 합니다.
+    def test_model_in_korean_folder(self):
+        with tempfile.TemporaryDirectory(prefix="그물_모델_") as folder:
+            for name in ("net.onnx", "model.json"):
+                shutil.copy2(ROOT / "models" / name, Path(folder) / name)
+            self.assertIsNotNone(Detector(folder).net)
 
     # 실제 전처리·좌표 복원·OpenCV NMS를 알려진 모델 출력으로 확인합니다.
     def test_letterbox_coordinates_and_nms(self):

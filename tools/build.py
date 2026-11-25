@@ -404,7 +404,7 @@ def main():
     preview_command = commands.add_parser("preview")
     preview_command.add_argument("--port", type=int, default=8765)
     control_command = commands.add_parser("control")
-    control_command.add_argument("--port", type=int, default=8765)
+    control_command.add_argument("--port", type=int, default=8770)
     control_command.add_argument("--bind", default="127.0.0.1")
     control_command.add_argument("--open", action="store_true")
     commands.add_parser("prepare")

@@ -319,7 +319,7 @@ if sys.platform == "brython":
             "그물 감지 꺼짐"
             if not state["enabled"]
             else (
-                "OpenCV 모델 준비됨"
+                ("OpenCV 모델 준비됨" if state["model_ready"] else "OpenCV 모델 준비 중")
                 if state["source"] == "none"
                 else f"그물 {state['count']}개 감지"
             )

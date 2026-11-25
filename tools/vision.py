@@ -17,12 +17,14 @@ class Detector:
         folder = Path(folder)
         info = json.loads((folder / "model.json").read_text(encoding="utf-8"))
         model = folder / "net.onnx"
-        if hashlib.sha256(model.read_bytes()).hexdigest() != info["sha256"]:
+        model_bytes = model.read_bytes()
+        if hashlib.sha256(model_bytes).hexdigest() != info["sha256"]:
             raise ValueError("그물 모델 SHA256이 모델 설명과 다릅니다.")
         if info.get("names") != ["net"] or info.get("size") != 640:
             raise ValueError("640 입력의 그물 한 종류 모델이 필요합니다.")
         cv2.setNumThreads(2)
-        self.net = cv2.dnn.readNetFromONNX(str(model))
+        # Windows의 한글 경로에서도 읽히도록 Python이 읽은 파일 내용을 전달합니다.
+        self.net = cv2.dnn.readNetFromONNX(np.frombuffer(model_bytes, dtype=np.uint8))
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
         self.lock = threading.Lock()
