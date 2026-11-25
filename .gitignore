@@ -32,6 +32,9 @@ build/
 .DS_Store
 .vscode/
 .idea/
+archive/
+# web/에서 빌드할 때 만드는 APK용 사본입니다.
+android/app/src/main/assets/web/
 
 # Publisher datasets and download archives (kept locally)
 data/labeled_sources/

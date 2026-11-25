@@ -1,4 +1,4 @@
--r requirements-pc.txt
+-r requirements.txt
 ultralytics==8.3.170
 torch==2.7.1
 torchvision==0.22.1
@@ -6,4 +6,3 @@ onnx==1.19.1
 Pillow==11.3.0
 requests==2.32.5
 beautifulsoup4==4.14.3
-transformers==4.57.1

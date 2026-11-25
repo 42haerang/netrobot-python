@@ -1,17 +1,15 @@
 # 외부 구성요소
 
-- Ultralytics YOLOv8n: https://github.com/ultralytics/ultralytics (AGPL-3.0). `models/yolov8n.pt`는 학습 시작용 일반 COCO 가중치입니다. 그물 학습 결과는 `phone/models/model.json`과 모델 카드를 확인하세요. 이전 `prototype-20261124` Release의 ONNX는 일반 COCO 데모입니다. 라이선스 전문은 `docs/licenses/ultralytics-AGPL-3.0.txt`입니다.
-- Noto Sans KR: https://github.com/notofonts/noto-cjk (SIL Open Font License 1.1). 폰트는 변경하지 않았습니다. 전문과 저작권 정보는 `phone/fonts/LICENSE.txt`입니다.
-- Grounding DINO Tiny: https://huggingface.co/IDEA-Research/grounding-dino-tiny (Apache-2.0). 과거 사진 박스 제안 실험용이며 현재 학습에는 사용하지 않습니다. 가중치는 APK에 포함하지 않습니다.
-- Chaquopy: https://chaquo.com/chaquopy/ (MIT). Android APK 안의 Python 런타임과 연결 코드에 사용합니다.
-- ONNX Runtime: https://github.com/microsoft/onnxruntime (MIT). Android 추론 대상 엔진.
-- pyFirmata2: https://github.com/berndporr/pyFirmata2 (LGPL-2.1), StandardFirmata: https://github.com/firmata/arduino . Arduino용 외부 펌웨어입니다.
-- Flask, OpenCV, NumPy, Kivy, Pillow, Requests, Transformers는 각 배포 패키지의 라이선스를 따릅니다.
-- 현재 학습 사진·라벨은 BePLi v2 공식 배포본(CC BY-NC-SA 4.0)에서 선별합니다: https://doi.org/10.17882/96963 . 출처와 변경 내용은 `phone/models/ATTRIBUTION.txt`, 사진별 ID·해시·박스는 `data/bepli_manifest.json`입니다. 원본 사진은 APK에 넣지 않습니다.
-- 과거 Openverse/Flickr 및 Wikimedia Commons 검색 후보는 품질 문제로 학습에서 제외했습니다. 해당 보관본의 사진별 권리 정보는 `data/CANDIDATE_SOURCES.csv`와 `data/candidates.json`에 남깁니다.
+- Brython 3.15.0: https://github.com/brython-dev/brython · BSD-3-Clause. 브라우저에서 Python을 실행합니다. `web/vendor/BRYTHON-LICENSE.txt`와 `brython-version.json`에 라이선스·원본 주소·패키지 SHA256을 기록합니다.
+- ONNX Runtime Web 1.20.1: https://github.com/microsoft/onnxruntime · MIT. 휴대폰 브라우저의 JS/WASM 신경망 실행 엔진입니다. `web/vendor/LICENSE.txt`에 전문이 있습니다.
+- Chaquopy 17.2.0: https://chaquo.com/chaquopy/ · MIT. Android Python 및 생성된 연결 코드를 제공합니다. Python 3.13 런타임은 PSF 라이선스를 따릅니다.
+- Ultralytics YOLOv8: https://github.com/ultralytics/ultralytics · AGPL-3.0. 학습과 ONNX 내보내기에 사용합니다. `docs/licenses/ultralytics-AGPL-3.0.txt`에 전문을 보관합니다.
+- BePLi v2: https://doi.org/10.17882/96963 · CC BY-NC-SA 4.0. 현재 학습 사진과 라벨의 출처입니다. `models/ATTRIBUTION.txt`에 저자·변경 사항을 기록합니다. 원본 사진은 APK에 넣지 않습니다.
+- NumPy, OpenCV, PyTorch, ONNX, Pillow, Requests, Beautiful Soup는 각 배포 패키지의 라이선스를 따릅니다.
 
-이 저장소는 개발 중인 공개 저장소입니다. 전체 배포물에 하나의 라이선스가 일괄 적용된다고 가정하지 마세요.
+FLOW 영상 패킷은 공개 형식 자료를 참조해 Python으로 구현했습니다. OpenIPC 프로그램 소스는 포함하지 않습니다.
 
-웹 화면에는 ONNX Runtime Web 1.20.1의 WASM 런타임을 포함합니다. MIT 라이선스는 `web/vendor/LICENSE.txt`입니다. https://onnxruntime.ai/docs/tutorials/web/
+- https://github.com/marshallrichards/turbodrone/blob/main/docs/research/wifi_uav.md
+- https://github.com/OpenIPC/decoder/blob/v2/docs/toys.md
 
-APK: Chaquopy 17.2.0 (MIT)와 Python 3.13 런타임(PSF)을 사용합니다. FLOW 프로토콜은 공개 패킷 형식 자료를 참조해 Python으로 구현했습니다. OpenIPC 소스 코드는 포함하지 않았습니다.
+이전 Kivy·Flask·폰트·Firmata·Grounding DINO 실험 소스와 출처 설명은 Git의 `android-v0.2.0` 태그에 보존되어 있습니다. 과거 검색 후보의 출처 기록은 현재 `data/`에도 유지합니다. 전체 배포물에 하나의 라이선스가 일괄 적용된다고 가정하지 마세요.

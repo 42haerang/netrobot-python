@@ -1,5 +1,6 @@
 {
   "available": false,
-  "trained_on_net": false,
-  "status": "Publisher-labeled net training is not complete."
+  "trained_on_net": true,
+  "download_url": "https://github.com/42haerang/netrobot-python/releases/download/android-v0.3.0/NetRobot-BePLi-focus-v2.onnx",
+  "status": "APK에는 기본 모델이 포함됩니다. 일반 웹에서는 Release의 ONNX를 내려받아 설정에서 선택하세요."
 }
