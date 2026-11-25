@@ -15,7 +15,7 @@ import time
 import requests
 from PIL import Image, ImageDraw, ImageOps
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 BASE_QUOTAS = {
     "test": {"net": 100, "lookalike": 60, "other": 40},
     "val": {"net": 50, "lookalike": 30, "other": 20},

@@ -14,12 +14,12 @@ import cv2
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "android/app/src/main/python"))
-from flow_video import Frames, parse_fragment, Receiver
+sys.path.insert(0, str(ROOT))
+from camera import Frames, parse_fragment, Receiver
 
 
 def header(q):
-    path = ROOT / "android/app/src/main/assets/jpeg_headers.json"
+    path = ROOT / "jpeg_headers.json"
     return b64decode(json.loads(path.read_text())[str(q)])
 
 
@@ -46,7 +46,7 @@ class FlowProtocol(unittest.TestCase):
                 stop.set()
             raise OSError("network temporarily unavailable")
 
-        with patch("flow_video.socket.socket", side_effect=unavailable_socket):
+        with patch("camera.socket.socket", side_effect=unavailable_socket):
             receiver._run("192.168.169.1", "zigzag", stop)
         self.assertEqual(len(attempts), 2)
 

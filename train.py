@@ -8,12 +8,12 @@ import os
 from pathlib import Path
 import shutil
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 os.environ.setdefault("YOLO_CONFIG_DIR", str(ROOT / "models/.yolo"))
 os.environ.setdefault("YOLO_AUTOINSTALL", "false")
 
 
-# 그물 한 종류 모델인지 확인하고 휴대폰용 고정 크기 ONNX로 내보냅니다.
+# 그물 한 종류 모델인지 확인하고 OpenCV용 고정 크기 ONNX로 내보냅니다.
 def export(weights, trained=True, size=640):
     from ultralytics import YOLO
     import torch
@@ -94,7 +94,7 @@ def check(weights, image_path):
     original = YOLO(str(weights)).model.float().eval()
     with torch.inference_mode():
         expected = original(torch.from_numpy(tensor))[0].numpy()
-    exported = cv2.dnn.readNetFromONNX(str(model_path))
+    exported = cv2.dnn.readNetFromONNX(np.frombuffer(model_path.read_bytes(), dtype=np.uint8))
     exported.setInput(tensor)
     actual = exported.forward()
     count = (size // 8) ** 2 + (size // 16) ** 2 + (size // 32) ** 2
@@ -114,10 +114,10 @@ def check(weights, image_path):
         "image": Path(image_path).name,
         "finite": True,
         "maximum_difference": float(np.abs(actual - expected).max()),
-        "scope": "PC OpenCV와 PyTorch 비교. Android 실행 검증은 별도.",
+        "scope": "PC OpenCV와 PyTorch 비교. 실제 로봇 카메라 성능 검증은 별도.",
     }
     info_path.write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
-    print("ONNX 수치 검사 통과. Android에서는 초기 추론으로 출력 형식을 다시 검사합니다.")
+    print("ONNX와 PyTorch 수치 검사 통과.")
 
 
 # 검증 사진으로 후보를 고른 후, 새 테스트 사진에서 한 번 평가합니다.
@@ -126,6 +126,11 @@ def train(dataset, initial, epochs):
     from ultralytics import YOLO
 
     dataset = Path(dataset).resolve()
+    # 폴더를 옮겨도 학습 사진을 찾도록 실행할 때 절대 경로 설정을 만듭니다.
+    config = ROOT / "models/.yolo/dataset.yaml"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(json.dumps({"path": str(dataset), "train": "images/train",
+                                "val": "images/val", "test": "images/test", "names": {0: "net"}}), encoding="utf-8")
     report = json.loads((dataset / "report.json").read_text())
     if (
         not report.get("previous_baseline_test_retired")
@@ -164,7 +169,7 @@ def train(dataset, initial, epochs):
     model.add_callback("on_train_epoch_end", finite)
     # 초기 모델의 가중치만 가져오고 새 학습 상태로 시작합니다.
     model.train(
-        data=str(dataset / "data.yaml"),
+        data=str(config),
         epochs=epochs,
         imgsz=320,
         batch=16,
@@ -196,7 +201,7 @@ def train(dataset, initial, epochs):
         candidate = YOLO(str(checkpoint))
         candidate.add_callback("on_val_start", threads)
         metrics = candidate.val(
-            data=str(dataset / "data.yaml"),
+            data=str(config),
             split="val",
             imgsz=640,
             batch=8,
@@ -214,7 +219,7 @@ def train(dataset, initial, epochs):
     model = YOLO(str(chosen))
     model.add_callback("on_val_start", threads)
     metrics = model.val(
-        data=str(dataset / "data.yaml"),
+        data=str(config),
         split="test",
         imgsz=640,
         batch=8,
@@ -229,7 +234,7 @@ def train(dataset, initial, epochs):
         "prior_full_frame_epochs": 20,
         "initialization": str(Path(initial).name),
         "training_size": 320,
-        "phone_size": 640,
+        "inference_size": 640,
         "model_selection": "Higher validation mAP50 at 640 between best/last crop checkpoints, before final test",
         "validation_candidates": [{"checkpoint": p.name, "mAP50": s} for s, p in validation],
         "selected_checkpoint": str(chosen.relative_to(ROOT)),

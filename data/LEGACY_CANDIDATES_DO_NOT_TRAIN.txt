@@ -1,1 +1,0 @@
-기존 raw/ 사진, candidates.json, box_suggestions.json은 검색 수집 후보이며 실제 그물이 아닌 사진이 섞여 있습니다. 새 학습에는 사용하지 않습니다. 공식 라벨 데이터는 labeled_sources/에 별도 저장합니다. 직접 촬영 사진은 요구하지 않습니다.

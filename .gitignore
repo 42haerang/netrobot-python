@@ -1,41 +1,19 @@
-# Local credentials / device-specific configuration
-settings.json
-phone/config.json
-**/connection.json
-.env
-.env.*
-# Generated assets are distributed separately in Releases
-*.onnx
-*.pt
-*.otf
-data/raw/
-data/qa/
-data/search_cache/
-data/dataset/
-data/dataset_bepli/
-data/dataset_bepli_focus/
-models/runs/
-models/.yolo/
-# Python / Android / editors
+# 실행·학습 중 생성되는 파일
 __pycache__/
 *.py[cod]
+*.log
+*.cache
+.env
+.env.*
 .venv/
 venv/
-.gradle/
-local.properties
-build/
-*.apk
-*.aab
-*.keystore
-*.jks
-*.log
-.DS_Store
-.vscode/
-.idea/
-archive/
-# web/에서 빌드할 때 만드는 APK용 사본입니다.
-android/app/src/main/assets/web/
-
-# Publisher datasets and download archives (kept locally)
-data/labeled_sources/
-*.part
+settings.json
+**/connection.json
+models/.yolo/
+models/runs/
+*.pt
+dataset/images/
+dataset/labels/
+dataset/review/
+dataset/downloads/
+dataset/raw/
